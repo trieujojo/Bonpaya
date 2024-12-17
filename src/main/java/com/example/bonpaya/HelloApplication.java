@@ -1,5 +1,6 @@
 package com.example.bonpaya;
 
+import Logic.Board.Position;
 import Logic.GameLogic;
 import Logic.Parameters;
 import Logic.Piece.ChessPiece;
@@ -9,14 +10,12 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.Control;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
 import java.util.*;
@@ -34,8 +33,10 @@ public class HelloApplication extends Application {
 
     private GridPane boardUI;
     private Pane[][] boardParts;
+    private Map<String, ImageView> imageViewSet;
 
     private GameLogic gameLogic;
+    private ChessPiece pawnSelected;
 
     @Override
     public void start(Stage stage) {
@@ -55,7 +56,7 @@ public class HelloApplication extends Application {
 
     private void createHome(){
         homePane = new BorderPane();
-        homeScene= new Scene(homePane ,800, 480);
+        homeScene= new Scene(homePane , Logic.Parameters.getScreenWidth(), Logic.Parameters.getScreenHeight());
         homePane.setStyle("-fx-background-color: beige;");
         Button playButton = new Button("Play");
         Button optionButton = new Button("Option");
@@ -72,7 +73,7 @@ public class HelloApplication extends Application {
         try{
             Image image = new Image(this.getClass().getResource("/Images/BonpayaTitle.png").toExternalForm());
             ImageView imageView = new ImageView(image);
-            imageView.setFitWidth(800);
+            imageView.setFitWidth(Logic.Parameters.getScreenWidth());
             homePane.setTop(imageView);
         }catch (Exception e){
             e.printStackTrace();
@@ -89,9 +90,13 @@ public class HelloApplication extends Application {
     }
 
     private void createGame(){
+        pawnSelected=null;
+        imageViewSet = new HashMap<>();
+
         gamePane = new BorderPane();
-        gameScene = new Scene(gamePane,800, 480 );
+        gameScene = new Scene(gamePane,Logic.Parameters.getScreenWidth(), Logic.Parameters.getScreenHeight() );
         boardUI= new GridPane();
+        boardUI.setOnMouseClicked(this::clickGrid);
         int size = gameLogic.getBoard().getSize();
         boardParts = new Pane[size][size];
         for (int i = 0; i < size; i++) {
@@ -135,7 +140,8 @@ public class HelloApplication extends Application {
             ImageView imageView = new ImageView(image);
             imageView.setFitHeight(Logic.Parameters.getScreenHeight()/8-5);
             imageView.setFitWidth(Logic.Parameters.getScreenWidth()/10);
-            boardUI.add(imageView,cp.getPosition()[1],cp.getPosition()[0]);
+            boardUI.add(imageView,cp.getPosition().col(),cp.getPosition().row());
+            imageViewSet.put(String.valueOf(cp.getId()), imageView);
         }catch (Exception e){
             e.printStackTrace();
         }
@@ -159,6 +165,39 @@ public class HelloApplication extends Application {
     private void playButtonHandler(ActionEvent actionEvent) {
         stage.setScene(gameScene);
         stage.show();
+    }
+
+    public void clickGrid(javafx.scene.input.MouseEvent event) {
+        Node clickedNode = event.getPickResult().getIntersectedNode();
+        if (clickedNode != boardUI) {
+            Integer colIndex = GridPane.getColumnIndex(clickedNode),
+                    rowIndex = GridPane.getRowIndex(clickedNode);
+//            System.out.println("Mouse clicked cell: " + colIndex + " And: " + rowIndex);
+            Position click = new Position(rowIndex,colIndex);
+            if(pawnSelected==null && gameLogic.getBoard().getArray().get(click)!=null){
+                ChessPiece cp = gameLogic.getBoard().getArray().get(click);
+                if((cp.getId()>0 && gameLogic.isWhiteTurn())||(cp.getId()<0 && !gameLogic.isWhiteTurn()))
+                    pawnSelected= gameLogic.getBoard().getArray().get(click);
+            }
+            else if(pawnSelected!=null) {
+                if (gameLogic.movePiece(pawnSelected, click, true)) {
+                    if (gameLogic.getBoard().isEatenThisTurn()){//gameLogic.getBoard().getMoveLog().getLast().eatenPiece() != null){
+                        boardUI.getChildren().remove(imageViewSet.get(String.valueOf(gameLogic.getBoard().getMoveLog().getLast().eatenPiece().getId())));
+                    }
+                    if(pawnSelected.getName().equals("king")&&
+                            Math.abs(gameLogic.getBoard().getMoveLog().getLast().start().col()-
+                                    gameLogic.getBoard().getMoveLog().getLast().destination().col())>1){
+                        ChessPiece rook = gameLogic.getBoard().getMoveLog().getLast().chessPiece();
+                        boardUI.getChildren().remove(imageViewSet.get(String.valueOf(rook.getId())));
+                        boardUI.add(imageViewSet.get(String.valueOf(rook.getId())), rook.getPosition().col(), rook.getPosition().row());
+                        pawnSelected.setEnPassant(false);
+                    }
+                    boardUI.getChildren().remove(imageViewSet.get(String.valueOf(pawnSelected.getId())));
+                    boardUI.add(imageViewSet.get(String.valueOf(pawnSelected.getId())), colIndex, rowIndex);
+                }
+                pawnSelected=null;
+            }
+         }
     }
 
 

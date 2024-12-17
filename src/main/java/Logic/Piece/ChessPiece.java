@@ -1,14 +1,17 @@
 package Logic.Piece;
 
+import Logic.Board.Board;
+import Logic.Board.Position;
+
 import java.util.*;
 
 public class ChessPiece {
     private String name;
     private int id;
-    private int[] position; // row then col
+    private Position position; // row then col
     private MovePattern movePattern;
-    private List<int[]> possibleMoves;
-    private List<int[]> blocked;
+    private List<Position> possibleMoves;
+    private List<Position> blocked;
     private boolean hasMoved;
     private boolean enPassant;
 
@@ -19,7 +22,7 @@ public class ChessPiece {
         possibleMoves=new LinkedList<>();
     }
 
-    public ChessPiece(String name, int id, int[] position) {
+    public ChessPiece(String name, int id, Position position) {
         this.name = name;
         this.id = id;
         this.position=position;
@@ -35,12 +38,23 @@ public class ChessPiece {
         return id;
     }
 
-    public int[] getPosition() {
+    public Position getPosition() {
         return position;
     }
 
-    private void setPosition(int[] position) {
+    public void setPosition(Position position) {
         this.position = position;
+    }
+
+    public boolean movePiece(Position position){
+        if(!hasMoved){
+            if(Math.abs(position.row()-this.position.row())==2 && name.equals("pawn")) enPassant=true;
+            else enPassant=false;
+        }else enPassant=false;
+
+        hasMoved=true;
+        setPosition(position);
+        return true;
     }
 
     public MovePattern getMovePattern() {
@@ -51,11 +65,18 @@ public class ChessPiece {
         this.movePattern = movePattern;
     }
 
-    public List<int[]> getPossibleMoves() {
+    public List<Position> getPossibleMoves() {
         return possibleMoves;
     }
 
-    public void setPossibleMoves(List<int[]> possibleMoves) {
+    public boolean addPossibleMove(Position position, Board board){
+        possibleMoves.add(position);
+        if(board.getArray().get(position)==null) board.addOnArriv(position,this);
+        else board.addOnLeav(position,this);
+        return true;
+    }
+
+    public void setPossibleMoves(List<Position> possibleMoves) {
         this.possibleMoves = possibleMoves;
     }
 
@@ -77,12 +98,31 @@ public class ChessPiece {
 
     public ChessPiece clone(){
         ChessPiece clone = new ChessPiece(name, id);
-        clone.setPosition(new int[]{position[0],position[1]});
+        clone.setPosition(position.copy());
         clone.setEnPassant(enPassant);
         clone.setMovePattern(movePattern);
         clone.setHasMoved(hasMoved);
         clone.setPossibleMoves(List.copyOf(possibleMoves));
         return clone;
+    }
+
+    @Override
+    public String toString(){
+        StringBuilder sb= new StringBuilder();
+        sb.append(name + id + "\r");
+        for(Position p : possibleMoves) sb.append(p);
+        return sb.toString();
+    }
+
+    @Override
+    public boolean equals(Object other){
+        if(other==null){
+            if(this==null) return true;
+            return false;
+        }
+        if(other.getClass() != this.getClass()) return false;
+        ChessPiece o = (ChessPiece) other;
+        return o.getId() == id;
     }
 }
 

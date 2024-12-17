@@ -1,12 +1,11 @@
 package Logic;
 
 import Logic.Board.Board;
+import Logic.Board.Position;
 import Logic.Piece.ChessPiece;
 import Logic.Piece.PieceFactory;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public class GameLogic {
     private Board board;
@@ -22,84 +21,155 @@ public class GameLogic {
         piecesSet.put("black",PieceFactory.getPiecesSet(board,false));
         board.setChessPieces(piecesSet);
         this.board= board;
+        for(String key : piecesSet.keySet()){
+            for(ChessPiece cp:piecesSet.get(key)){
+                checkPossibleMove(cp);
+//                System.out.println(cp + " " + cp.getId());
+//                System.out.println(Arrays.toString(cp.getPossibleMoves().toArray()));
+            }
+        }
+    }
+    //TODO next
+    public boolean movePiece(ChessPiece cp, Position pos){
+        board.setEatenThisTurn(false);
+        board.getArray().put(cp.getPosition(),null);
+        if(cp.getName().equals("pawn")&& enPassantEat(cp,pos)){
+            board.getMoveLog().add(new Move(cp.getPosition(),pos,cp,board.getEatenLast()));
+        }else if(board.getArray().get(pos)!=null) {
+            board.addEaten(board.getArray().get(pos));
+            board.getMoveLog().add(new Move(cp.getPosition(),pos,cp,board.getArray().get(pos)));
+        }else if(cp.getName().equals("king") && Math.abs(pos.col()-cp.getPosition().col())>1){
+            board.getMoveLog().add(new Move(cp.getPosition(),pos,cp,null));
+            ChessPiece rook=board.getArray().get(pos.left());
+            if(rook!=null){
+                movePiece(rook,pos.right());
+            }
+            cp.setEnPassant(true);
+            System.out.println(cp);
+            System.out.println(cp.isEnPassant());
+            board.changeTurn();
+        }else{
+            board.getMoveLog().add(new Move(cp.getPosition(),pos,cp,null));
+        }
+
+
+
+        board.getArray().put(pos,cp);
+        Position oldPos = cp.getPosition();
+        cp.movePiece(pos);
+
+//        if(cp.getName().equals("pawn")) enPassantLogic(pos,cp); // add the move enPassant when arrive next to it
+
+        if(board.getOnLeave().containsKey(oldPos)){
+            for(ChessPiece piece: board.getOnLeave().get(oldPos)){
+                checkPossibleMove(piece);
+            }
+            board.removeOnLeav(oldPos);
+        }
+        if(board.getOnArriv().containsKey(pos)){
+            for(ChessPiece piece: board.getOnArriv().get(pos))
+                checkPossibleMove(piece);
+            board.removeOnArriv(pos);
+        }
+        if(board.isEatenThisTurn() && board.getOnLeave().containsKey(pos)) {
+            for(ChessPiece piece:board.getOnLeave().get(pos))
+                checkPossibleMove(piece);
+            board.removeOnLeav(pos);
+        }
+        board.changeTurn();
+        return true;
     }
 
 
- // TODO: add the possible "influence on other moves"
+    public boolean movePiece(ChessPiece cp, Position pos,boolean verify){
+        if(verify(cp,pos)) {
+            return movePiece(cp, pos);
+        }
+        return false;
+    }
+    private boolean verify(ChessPiece cp, Position newPos){
+        if(cp.getPossibleMoves().contains(newPos)) return true;
+        return false;
+    }
+
+    private boolean enPassantEat(ChessPiece cp,Position position){
+        if(position.col()!=cp.getPosition().col() && getBoard().getArray().get(position)==null){
+            ChessPiece expectedPawn = board.getArray().get(new Position(cp.getPosition().row(),position.col()));
+            if(expectedPawn != null && expectedPawn.getName().equals("pawn")){
+                board.addEaten(expectedPawn);
+                return true;
+            }
+        }return false;
+    }
+    private void enPassantCheckMove(Position pos, ChessPiece cp) {//todo move this
+        Position next= pos.left();
+        if(pos.row()< board.getSize() - 3 && pos.row()> 2){
+            checkNextTo(pos,next,cp);
+            next= pos.right();
+            checkNextTo(pos,next,cp);
+        }else cp.setEnPassant(false);
+//        if()
+    }
+
+    private void checkNextTo(Position pos, Position next,ChessPiece cp){
+        if(next != null && board.getArray().get(next)!= null && board.getArray().get(next).getName().equals("pawn") &&
+                board.getArray().get(next).isEnPassant()) {
+            board.getArray().get(next)
+                    .getPossibleMoves().add(new Position((cp.getPosition().row()+pos.row())/2,pos.col()));
+        }
+    }
+
     // threaten (pawn) and block
     public void checkPossibleMove(ChessPiece cp){
-        int[] pos = cp.getPosition();
+        Position pos = cp.getPosition();
         cp.setPossibleMoves(new LinkedList<>());
         switch(cp.getMovePattern()){
             case UP1:
-                if(pos[0]+1<board.getSize() && board.getBoard()[pos[0]+1][pos[1]]==0)
-                    cp.getPossibleMoves().add(new int[]{pos[0]+1,pos[1]});
-                if(!cp.hasMoved() && board.getBoard()[pos[0]+2][pos[1]]==0)
-                    cp.getPossibleMoves().add(new int[]{pos[0]+2,pos[1]});
-                if(pos[0]+1<board.getSize() && pos[1]+1<board.getSize()
-                && cp.getId()*board.getBoard()[pos[0]+1][pos[1]+1]<0)
-                    cp.getPossibleMoves().add(new int[]{pos[0]+1,pos[1]+1});
-                if(pos[0]+1<board.getSize() && pos[1]-1>0
-                        && cp.getId()*board.getBoard()[pos[0]+1][pos[1]-1]<0)
-                    cp.getPossibleMoves().add(new int[]{pos[0]+1,pos[1]-1});
+                verifyEmpty(pos.up(),cp);
+                if(!cp.hasMoved())verifyEmpty(pos.up().up(),cp);
+                verifyPawnAttack(pos.upLeft(),cp);
+                verifyPawnAttack(pos.upRight(),cp);
+                enPassantCheckMove(pos,cp);
                 break;
             case DOWN1:
-                if(pos[0]-1>0 && board.getBoard()[pos[0]-1][pos[1]]==0)
-                    cp.getPossibleMoves().add(new int[]{pos[0]-1,pos[1]});
-                if(!cp.hasMoved() && board.getBoard()[pos[0]-2][pos[1]]==0)
-                    cp.getPossibleMoves().add(new int[]{pos[0]-2,pos[1]});
-                if(pos[0]-1>0 && pos[1]+1<board.getSize()
-                        && cp.getId()*board.getBoard()[pos[0]-1][pos[1]+1]<0)
-                    cp.getPossibleMoves().add(new int[]{pos[0]-1,pos[1]+1});
-                if(pos[0]-1>0 && pos[1]-1>0
-                        && cp.getId()*board.getBoard()[pos[0]-1][pos[1]-1]<0)
-                    cp.getPossibleMoves().add(new int[]{pos[0]-1,pos[1]-1});
+                verifyEmpty(pos.down(),cp);
+                if(!cp.hasMoved())verifyEmpty(pos.down().down(),cp);
+                verifyPawnAttack(pos.downRight(),cp);
+                verifyPawnAttack(pos.downLeft(),cp);
+                enPassantCheckMove(pos,cp);
                 break;
             case L:
-                if(pos[0]+2< board.getSize()){ // up2
-                    if(pos[1]+1< board.getSize() && board.getBoard()[pos[0]+2][pos[1]+1]*cp.getId()<=0)
-                        cp.getPossibleMoves().add(new int[]{pos[0]+2,pos[1]+1});
-                    if(pos[1]-1> 0 && board.getBoard()[pos[0]+2][pos[1]-1]*cp.getId()<=0)
-                        cp.getPossibleMoves().add(new int[]{pos[0]+2,pos[1]-1});
-                }else if(pos[0]-2>0){  // down2
-                    if(pos[1]+1< board.getSize() && board.getBoard()[pos[0]-2][pos[1]+1]*cp.getId()<=0)
-                        cp.getPossibleMoves().add(new int[]{pos[0]-2,pos[1]+1});
-                    if(pos[1]-1> 0 && board.getBoard()[pos[0]-2][pos[1]-1]*cp.getId()<=0)
-                        cp.getPossibleMoves().add(new int[]{pos[0]-2,pos[1]-1});
+                Position dest = pos.up();
+                if(dest!=null) {
+                    verifyEmptyAttack(dest.upRight(),cp);
+                    verifyEmptyAttack(dest.upLeft(),cp);
                 }
-                if(pos[1]+2< board.getSize()){ // right 2
-                    if(pos[0]+1< board.getSize() && board.getBoard()[pos[0]+1][pos[1]+2]*cp.getId()<=0)
-                        cp.getPossibleMoves().add(new int[]{pos[0]+1,pos[1]+2});
-                    if(pos[0]-1> 0 && board.getBoard()[pos[0]-1][pos[1]+2]*cp.getId()<=0)
-                        cp.getPossibleMoves().add(new int[]{pos[0]-1,pos[1]+2});
-                }else if(pos[1]-2>0){ // left 2
-                    if(pos[0]+1< board.getSize() && board.getBoard()[pos[0]+1][pos[1]-2]*cp.getId()<=0)
-                        cp.getPossibleMoves().add(new int[]{pos[0]+1,pos[1]-2});
-                    if(pos[0]-1> 0 && board.getBoard()[pos[0]-1][pos[1]-2]*cp.getId()<=0)
-                        cp.getPossibleMoves().add(new int[]{pos[0]-1,pos[1]-2});
+                dest = pos.right();
+                if(dest!=null) {
+                    verifyEmptyAttack(dest.upRight(),cp);
+                    verifyEmptyAttack(dest.downRight(),cp);
+                }
+                dest = pos.down();
+                if(dest!=null) {
+                    verifyEmptyAttack(dest.downLeft(),cp);
+                    verifyEmptyAttack(dest.downRight(),cp);
+                }
+                dest = pos.left();
+                if(dest!=null) {
+                    verifyEmptyAttack(dest.upLeft(),cp);
+                    verifyEmptyAttack(dest.downLeft(),cp);
                 }
                 break;
             case ONE:
-                if(pos[0]+1< board.getSize()){
-                    if(board.getBoard()[pos[0]+1][pos[1]]*cp.getId()<=0)
-                        cp.getPossibleMoves().add(new int[]{pos[0]+1,pos[1]});
-                    if(pos[1]+1< board.getSize() && board.getBoard()[pos[0]+1][pos[1]+1]*cp.getId()<=0)
-                        cp.getPossibleMoves().add(new int[]{pos[0]+1, pos[1]+1});
-                    if(pos[1]-1> 0 && board.getBoard()[pos[0]+1][pos[1]-1]*cp.getId()<=0)
-                        cp.getPossibleMoves().add(new int[]{pos[0]+1, pos[1]-1});
-                }
-                if(pos[0]-1>0){
-                    if(board.getBoard()[pos[0]-1][pos[1]]*cp.getId()<=0)
-                        cp.getPossibleMoves().add(new int[]{pos[0]-1,pos[1]});
-                    if(pos[1]+1< board.getSize() && board.getBoard()[pos[0]-1][pos[1]+1]*cp.getId()<=0)
-                        cp.getPossibleMoves().add(new int[]{pos[0]-1, pos[1]+1});
-                    if(pos[1]-1> 0 && board.getBoard()[pos[0]-1][pos[1]-1]*cp.getId()<=0)
-                        cp.getPossibleMoves().add(new int[]{pos[0]-1, pos[1]-1});
-                }
-                if(pos[1]+1< board.getSize() &&board.getBoard()[pos[0]][pos[1]+1]*cp.getId()<=0)
-                    cp.getPossibleMoves().add(new int[]{pos[0], pos[1] + 1});
-                if(pos[1]-1> 0 &&board.getBoard()[pos[0]][pos[1]-1]*cp.getId()<=0)
-                    cp.getPossibleMoves().add(new int[]{pos[0], pos[1]-1});
+                verifyEmptyAttack(pos.right(),cp);
+                verifyEmptyAttack(pos.left(),cp);
+                verifyEmptyAttack(pos.up(),cp);
+                verifyEmptyAttack(pos.down(),cp);
+                verifyEmptyAttack(pos.upLeft(),cp);
+                verifyEmptyAttack(pos.upRight(),cp);
+                verifyEmptyAttack(pos.downLeft(),cp);
+                verifyEmptyAttack(pos.downRight(),cp);
+                verifyRockMove(cp);
                 break;
             case DIAGONAL:
                 checkDiagonal(cp,pos);
@@ -111,86 +181,106 @@ public class GameLogic {
                 checkDiagonal(cp,pos);
                 checkCross(cp,pos);
                 break;
+            default:
+                System.out.println("default case activated");
         }
     }
 
-    private void checkDiagonal(ChessPiece cp, int[] pos){
-        int index=1;
-        boolean empty=true;
-        while(pos[0]+index< board.getSize() && pos[1]+index< board.getSize() && empty){
-            if(board.getBoard()[pos[0]+index][pos[1]+index]!=0) empty = false;
-            else cp.getPossibleMoves().add(new int[]{pos[0]+index,pos[1]+index});
-            index++;
+    private void verifyRockMove(ChessPiece cp) {
+        if(!cp.hasMoved()){
+            if(board.getArray().get(cp.getPosition().left().left().left())!=null&&
+                    board.getArray().get(cp.getPosition().left().left().left()).getName().equals("rook")){
+                if(!board.getArray().get(cp.getPosition().left().left().left()).hasMoved() &&
+                        board.getArray().get(cp.getPosition().left())==null &&
+                        board.getArray().get(cp.getPosition().left().left())==null){
+                    cp.getPossibleMoves().add(cp.getPosition().left().left());
+                }else if(board.getArray().get(cp.getPosition().left().left())!=null)
+                    board.addOnLeav(cp.getPosition().left().left(),cp);
+            }
         }
-        if(pos[0]+index< board.getSize() && pos[1]+index< board.getSize()
-                && board.getBoard()[pos[0]+index][pos[1]+index]*cp.getId()<0)
-            cp.getPossibleMoves().add(new int[]{pos[0]+index,pos[1]+index});
-        index=-1;
-        empty=true;
-        while(pos[0]+index>0 && pos[1]+index>0 && empty){
-            if(board.getBoard()[pos[0]+index][pos[1]+index]!=0) empty = false;
-            else cp.getPossibleMoves().add(new int[]{pos[0]+index,pos[1]+index});
-            index--;
-        }
-        if(pos[0]+index>0 && pos[1]+index>0
-                && board.getBoard()[pos[0]+index][pos[1]+index]*cp.getId()<0)
-            cp.getPossibleMoves().add(new int[]{pos[0]+index,pos[1]+index});
-        index =1;
-        empty = true;
-        while(pos[0]-index>0 && pos[1]+index< board.getSize() && empty){
-            if(board.getBoard()[pos[0]-index][pos[1]+index]!=0) empty = false;
-            else cp.getPossibleMoves().add(new int[]{pos[0]-index,pos[1]+index});
-            index++;
-        }
-        if(pos[0]-index>0 && pos[1]+index< board.getSize()
-                && board.getBoard()[pos[0]-index][pos[1]+index]*cp.getId()<0)
-            cp.getPossibleMoves().add(new int[]{pos[0]-index,pos[1]+index});
-        index =1;
-        empty = true;
-        while(pos[0]+index< board.getSize() && pos[1]-index>0 && empty){
-            if(board.getBoard()[pos[0]+index][pos[1]-index]!=0) empty = false;
-            else cp.getPossibleMoves().add(new int[]{pos[0]+index,pos[1]-index});
-            index++;
-        }
-        if(pos[0]+index< board.getSize() && pos[1]-index>0
-                && board.getBoard()[pos[0]+index][pos[1]-index]*cp.getId()<0)
-            cp.getPossibleMoves().add(new int[]{pos[0]+index,pos[1]-index});
     }
 
-    private void checkCross(ChessPiece cp, int[] pos){
-        int index=1;
-        boolean empty=true;
-        while(pos[0]+index< board.getSize() && empty){
-            if(board.getBoard()[pos[0]+index][pos[1]]!=0) empty=false;
-            else cp.getPossibleMoves().add(new int[]{pos[0]+index,pos[1]});
-        }
-        if(pos[0]+index< board.getSize() && board.getBoard()[pos[0]+index][pos[1]]*cp.getId()<0)
-            cp.getPossibleMoves().add(new int[]{pos[0]+index,pos[1]});
-        index=1;empty=true;
-        while(pos[1]+index< board.getSize() && empty){
-            if(board.getBoard()[pos[0]][pos[1]+index]!=0) empty=false;
-            else cp.getPossibleMoves().add(new int[]{pos[0],pos[1]+index});
-        }
-        if(pos[1]+index< board.getSize() && board.getBoard()[pos[0]][pos[1]+index]*cp.getId()<0)
-            cp.getPossibleMoves().add(new int[]{pos[0],pos[1]+index});
-        index=1;empty=true;
-        while(pos[0]-index>0 && empty){
-            if(board.getBoard()[pos[0]-index][pos[1]]!=0) empty=false;
-            else cp.getPossibleMoves().add(new int[]{pos[0]-index,pos[1]});
-        }
-        if(pos[0]-index< board.getSize() && board.getBoard()[pos[0]-index][pos[1]]*cp.getId()<0)
-            cp.getPossibleMoves().add(new int[]{pos[0]-index,pos[1]});
-        index=1;empty=true;
-        while(pos[1]-index>0 && empty){
-            if(board.getBoard()[pos[0]][pos[1]-index]!=0) empty=false;
-            else cp.getPossibleMoves().add(new int[]{pos[0],pos[1]-index});
-        }
-        if(pos[1]-index< board.getSize() && board.getBoard()[pos[0]][pos[1]-index]*cp.getId()<0)
-            cp.getPossibleMoves().add(new int[]{pos[0],pos[1]-index});
+    private void checkDiagonal(ChessPiece cp, Position pos){
+        Position dest = pos.upLeft();
+        while(verifyEmpty(dest,cp)) dest = dest.upLeft();
+        verifyAttack(dest,cp);
+        dest= pos.upRight();
+        while(verifyEmpty(dest,cp)) dest = dest.upRight();
+        verifyAttack(dest,cp);
+        dest= pos.downLeft();
+        while(verifyEmpty(dest,cp)) dest = dest.downLeft();
+        verifyAttack(dest,cp);
+        dest= pos.downRight();
+        while(verifyEmpty(dest,cp)) dest = dest.downRight();
+        verifyAttack(dest,cp);
+    }
 
+    private void checkCross(ChessPiece cp, Position pos){
+        Position dest = pos.up();
+        while(verifyEmpty(dest,cp)) dest = dest.up();
+        verifyAttack(dest,cp);
+        dest = pos.right();
+        while(verifyEmpty(dest,cp)) dest = dest.right();
+        verifyAttack(dest,cp);
+        dest= pos.down();
+        while(verifyEmpty(dest,cp)) dest = dest.down();
+        verifyAttack(dest,cp);
+        dest= pos.left();
+        while(verifyEmpty(dest,cp)) dest = dest.left();
+        verifyAttack(dest,cp);
+    }
+
+    // return true if empty
+    public boolean verifyEmpty(Position destination, ChessPiece cp){
+        if(destination==null) return false;
+        if(board.getArray().get(destination)==null) {
+            board.addOnArriv(destination,cp);
+            return cp.addPossibleMove(destination, board);
+        } else board.addOnLeav(destination,cp);
+        return false;
+    }
+
+    public boolean verifyPawnAttack(Position destination, ChessPiece cp){
+        if(destination == null) return false;
+        if(board.getArray().get(destination)!= null && board.getArray().get(destination).getId()*cp.getId()<0) {
+            cp.addPossibleMove(destination, board);
+            board.addOnLeav(destination,cp);
+        }
+        else board.addOnArriv(destination,cp);// todo on arrive
+        Position enPassant = new Position(cp.getPosition().row(),destination.col());
+        if(enPassant!=null){
+            if(board.getArray().get(enPassant)!=null && board.getArray().get(enPassant).getId()*cp.getId()<0
+                    && board.getArray().get(enPassant).isEnPassant())
+                cp.getPossibleMoves().add(destination); //TODO verify only when pawn isPassant move
+        }
+        return true;
+    }
+
+    public boolean verifyAttack(Position destination, ChessPiece cp){
+        if(destination == null) return false;
+        if(board.getArray().get(destination)!=null && board.getArray().get(destination).getId() * cp.getId()<0)
+            cp.addPossibleMove(destination,board);
+        else board.addOnLeav(destination,cp);
+        return true;
+    }
+
+    //meant for knight and king
+    public boolean verifyEmptyAttack(Position destination, ChessPiece cp){
+        if(destination == null) return false;
+        if(board.getArray().get(destination)==null||board.getArray().get(destination).getId() * cp.getId()<=0)
+            cp.addPossibleMove(destination,board);
+        else board.addOnLeav(destination,cp);
+        return true;
     }
 
     public Board getBoard() {
         return board;
+    }
+
+    public void changeTurn(){
+        board.changeTurn();
+    }
+    public boolean isWhiteTurn(){
+        return board.isWhiteTurn();
     }
 }

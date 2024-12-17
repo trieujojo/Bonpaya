@@ -2,8 +2,8 @@ package Logic;
 
 public class Parameters {
     private static int boardSize=8;
-    private static int screenWidth = 800;
-    private static int screenHeight = 480;
+    private static int screenWidth = 1000;
+    private static int screenHeight = 700;
 
     public static int boardSize() {
         return boardSize;
