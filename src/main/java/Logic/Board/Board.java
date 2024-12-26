@@ -2,6 +2,7 @@ package Logic.Board;
 
 import Logic.Move;
 import Logic.Piece.ChessPiece;
+import Logic.PossibleMoveChecker;
 
 import java.util.*;
 
@@ -127,4 +128,5 @@ public class Board {
     public void setEatenThisTurn(boolean eatenThisTurn) {
         this.eatenThisTurn = eatenThisTurn;
     }
+
 }

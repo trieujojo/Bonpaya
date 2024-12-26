@@ -2,6 +2,7 @@ package com.example.bonpaya;
 
 import Logic.Board.Position;
 import Logic.GameLogic;
+import Logic.MoveBack;
 import Logic.Parameters;
 import Logic.Piece.ChessPiece;
 import javafx.application.Application;
@@ -122,7 +123,7 @@ public class HelloApplication extends Application {
         }
 
         Button backButton = new Button("Back");
-        backButton.setOnAction(this::backButtonHandler);
+        backButton.setOnAction(this::backMoveHandler);
         gamePane.setBottom(backButton);
         gamePane.setCenter(boardUI);
         for (ChessPiece cp: gameLogic.getBoard().getChessPieces().get("white")) {
@@ -132,6 +133,24 @@ public class HelloApplication extends Application {
             chessPieceView(cp, "black");
         }
         gamePane.setStyle("-fx-background-color: black;");
+    }
+
+    private void backMoveHandler(ActionEvent actionEvent) {
+        MoveBack.moveBack(gameLogic.getBoard());
+        actualizeGrid();
+    }
+
+    private void actualizeGrid() {
+        clearGrid();
+        for(Position pos: gameLogic.getBoard().getArray().keySet()){
+            if(gameLogic.getBoard().getArray().get(pos)!=null) boardUI.add(imageViewSet.get(String.valueOf(gameLogic.getBoard().getArray().get(pos).getId())), pos.col(), pos.row());
+        }
+    }
+
+    private void clearGrid() {
+        for(ImageView image: imageViewSet.values()){
+            boardUI.getChildren().remove(image);
+        }
     }
 
     private void chessPieceView(ChessPiece cp, String color){
