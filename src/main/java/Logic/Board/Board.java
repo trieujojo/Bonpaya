@@ -1,22 +1,25 @@
 package Logic.Board;
 
-import Logic.Move;
+import Logic.GameFlow.GameLogic;
+import Logic.GameFlow.Move;
 import Logic.Piece.ChessPiece;
-import Logic.PossibleMoveChecker;
+import Logic.Piece.PieceFactory;
 
 import java.util.*;
 
 public class Board {
     private int size;
-//    private int[][] board; // contains ID of pieces
+    private GameLogic logic;
     private Map<Position, ChessPiece> board;
-    private HashMap<String,List<ChessPiece>> chessPieces;
+    private HashMap<String,LinkedList<ChessPiece>> chessPieces;
     private boolean whiteTurn=true;//true first color
     private Map<Position, Set<ChessPiece>> blocked; // blocked pieces
     private Map<Position, Set<ChessPiece>> blocking; // block if landing on this
     private LinkedList<Move> moveLog;
     private LinkedList<ChessPiece> eatenPieces;
     private boolean eatenThisTurn = false;
+    private boolean endGame= false;
+
 
 
     public Board(int size) {
@@ -33,15 +36,19 @@ public class Board {
         eatenPieces=new LinkedList<>();
     }
 
+    public void setLogic(GameLogic logic) {
+        this.logic = logic;
+    }
+
     public Map<Position, ChessPiece> getArray() {
         return board;
     }
 
-    public HashMap<String, List<ChessPiece>> getChessPieces() {
+    public HashMap<String, LinkedList<ChessPiece>> getChessPieces() {
         return chessPieces;
     }
 
-    public void setChessPieces(HashMap<String, List<ChessPiece>> chessPieces) {
+    public void setChessPieces(HashMap<String, LinkedList<ChessPiece>> chessPieces) {
         this.chessPieces = chessPieces;
     }
 
@@ -56,7 +63,17 @@ public class Board {
     public Board clone(){
         Board clone = new Board(size);
         clone.setWhiteTurn(whiteTurn);
-//        clone.setChessPieces();
+        clone.setLogic(logic);
+        clone.setChessPieces(new HashMap<>());
+        for(String key: chessPieces.keySet()) {
+            clone.chessPieces.put(key, PieceFactory.cloneSet(chessPieces.get(key)));
+            for(ChessPiece chessPiece: clone.chessPieces.get(key)) clone.board.put(chessPiece.getPosition(),chessPiece);
+        }
+//
+        clone.blocked = Move.cloneBlocked(blocked);
+        clone.blocking = Move.cloneBlocked(blocking);
+        clone.eatenThisTurn = eatenThisTurn;
+        clone.eatenPieces = PieceFactory.cloneSet(eatenPieces);
         return clone;
     }
 
@@ -72,7 +89,6 @@ public class Board {
     public boolean addOnLeav(Position pos, ChessPiece cp){
         if(blocked.containsKey(pos)) blocked.get(pos).add(cp);
         else blocked.put(pos,new HashSet<>(Collections.singletonList(cp)));
-//        System.out.println(pos+" "+cp);
         return true;
     }
 
@@ -129,4 +145,21 @@ public class Board {
         this.eatenThisTurn = eatenThisTurn;
     }
 
+    public boolean movePiece(ChessPiece cp, Position pos){return logic.movePiece(cp,pos,true);}
+
+    public boolean uneaten() {
+        if(eatenPieces.size()>0) {
+            ChessPiece p = eatenPieces.removeLast();
+            getChessPieces().get(p.getId()>0?"white":"black").add(p);
+        }
+        return true;
+    }
+
+    public boolean isEndGame() {
+        return endGame;
+    }
+
+    public void setEndGame(boolean endGame) {
+        this.endGame = endGame;
+    }
 }

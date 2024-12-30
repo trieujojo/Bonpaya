@@ -1,4 +1,4 @@
-package Logic;
+package Logic.GameFlow;
 
 import Logic.Board.Board;
 import Logic.Board.Position;

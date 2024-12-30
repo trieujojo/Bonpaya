@@ -14,24 +14,31 @@ public class ChessPiece {
     private List<Position> blocked;
     private boolean hasMoved;
     private boolean enPassant;
+    private String color;
 
-    public ChessPiece(String name, int id) {
+    public ChessPiece(String name, String color, int id) {
         this.name = name;
         this.id = id;
         blocked = new LinkedList<>();
         possibleMoves=new LinkedList<>();
+        this.color=color;
     }
 
-    public ChessPiece(String name, int id, Position position) {
+    public ChessPiece(String name,String color, int id, Position position) {
         this.name = name;
         this.id = id;
         this.position=position;
         blocked = new LinkedList<>();
         possibleMoves=new LinkedList<>();
+        this.color=color;
     }
 
     public String getName() {
         return name;
+    }
+
+    public String getColor() {
+        return color;
     }
 
     public int getId() {
@@ -97,7 +104,7 @@ public class ChessPiece {
     }
 
     public ChessPiece clone(){
-        ChessPiece clone = new ChessPiece(name, id);
+        ChessPiece clone = new ChessPiece(name, color,id);
         clone.setPosition(position.copy());
         clone.setEnPassant(enPassant);
         clone.setMovePattern(movePattern);
@@ -109,7 +116,9 @@ public class ChessPiece {
     @Override
     public String toString(){
         StringBuilder sb= new StringBuilder();
-        sb.append(name + id + "\r");
+        sb.append(name);
+        sb.append(id);
+        sb.append("\r");
         for(Position p : possibleMoves) sb.append(p);
         return sb.toString();
     }

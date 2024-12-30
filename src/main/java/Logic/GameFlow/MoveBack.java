@@ -1,9 +1,9 @@
-package Logic;
+package Logic.GameFlow;
 
 import Logic.Board.Board;
 import Logic.Piece.ChessPiece;
 
-import static Logic.PossibleMoveChecker.checkPossibleMove;
+import static Logic.GameFlow.PossibleMoveChecker.checkPossibleMove;
 
 public class MoveBack {
     public static void moveBack(Board board){
@@ -12,10 +12,15 @@ public class MoveBack {
             moveLog.chessPiece().setPosition(moveLog.start());
             board.getArray().remove(moveLog.destination());
             board.getArray().put(moveLog.start(),moveLog.chessPiece());
-            if (moveLog.eatenPiece() != null)
+            if (moveLog.eatenPiece() != null) {
                 board.getArray().put(moveLog.eatenPiece().getPosition(), moveLog.eatenPiece());
+                board.uneaten();
+            }
             moveLog.chessPiece().setHasMoved(moveLog.hasMoved());
-
+            if(moveLog.promotion()){
+                board.getChessPieces().get(moveLog.chessPiece().getColor()).removeLast();
+                board.getChessPieces().get(moveLog.chessPiece().getColor()).add(moveLog.chessPiece());
+            }
             for (ChessPiece cp : moveLog.checkThose()) {
                 checkPossibleMove(cp);
             }
