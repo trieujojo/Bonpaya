@@ -18,7 +18,8 @@ public class MiniMax {
 
     public Move evaluate(){
         Board clone = board.clone();
-        evaluate(board,depth,Integer.MIN_VALUE,Integer.MAX_VALUE,board.isWhiteTurn());
+        clone.setFakeBoard(true);
+        evaluate(clone,depth,Integer.MIN_VALUE,Integer.MAX_VALUE,board.isWhiteTurn());
         return chosenMove;
     }
 
@@ -53,6 +54,7 @@ public class MiniMax {
                         chosenMove=board.getMoveLog().getFirst();
                     }
                     beta = Math.min(beta,eval);
+                    MoveBack.moveBack(board);
                     if(beta<=alpha) break;
                 }
             }
@@ -63,7 +65,7 @@ public class MiniMax {
     private int staticEval1(Board board){
         int sum=0;
         for(Move move :board.getMoveLog()){
-
+            addSum(sum,move.eatenPiece());
         }
         return 0;
     }

@@ -52,6 +52,7 @@ public class GameLogic {
     }
 
     public boolean movePiece(ChessPiece cp, Position pos){
+        System.out.println("fake?"+ board.isFakeBoard());
         board.setEatenThisTurn(false);
         board.getArray().put(cp.getPosition(),null);
         List<ChessPiece> toCheckBack = new LinkedList<>();
@@ -118,10 +119,17 @@ public class GameLogic {
     private void promotePawn(ChessPiece cp,Position pos) {
         promotedPawn=cp;
         promotionPos = pos;
+        if(board.isFakeBoard()){
+            if(isWhiteTurn())
+                promote("queen","white");
+            else
+                promote("queen","black");
+        }else{
         if(isWhiteTurn())
             getWhitePlayer().promotePiece();
         else
             getBlackPlayer().promotePiece();
+        }
     }
 
     public ChessPiece promote(String choice, String color){
@@ -164,7 +172,9 @@ public class GameLogic {
         }
     }
 
-
+    public void setBoard(Board board) {
+        this.board = board;
+    }
 
     public Board getBoard() {
         return board;

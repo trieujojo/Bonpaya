@@ -23,6 +23,10 @@ public class MiniMaxPlayer implements Player{
         controller.promoteAI("queen",white? "white":"black");
     }
 
+    public void fakePromotion(){
+
+    }
+
     @Override
     public Move getMove() {
         return miniMax.evaluate();

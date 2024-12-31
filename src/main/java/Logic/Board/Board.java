@@ -19,6 +19,7 @@ public class Board {
     private LinkedList<ChessPiece> eatenPieces;
     private boolean eatenThisTurn = false;
     private boolean endGame= false;
+    private boolean fakeBoard=false;
 
 
 
@@ -63,8 +64,9 @@ public class Board {
     public Board clone(){
         Board clone = new Board(size);
         clone.setWhiteTurn(whiteTurn);
-        clone.setLogic(logic);
-        clone.setChessPieces(new HashMap<>());
+        clone.setLogic(new GameLogic());
+        clone.logic.setBoard(clone);
+        clone.setChessPieces(new HashMap<String, LinkedList<ChessPiece>>());
         for(String key: chessPieces.keySet()) {
             clone.chessPieces.put(key, PieceFactory.cloneSet(chessPieces.get(key)));
             for(ChessPiece chessPiece: clone.chessPieces.get(key)) clone.board.put(chessPiece.getPosition(),chessPiece);
@@ -161,5 +163,13 @@ public class Board {
 
     public void setEndGame(boolean endGame) {
         this.endGame = endGame;
+    }
+
+    public boolean isFakeBoard() {
+        return fakeBoard;
+    }
+
+    public void setFakeBoard(boolean fakeBoard) {
+        this.fakeBoard = fakeBoard;
     }
 }
