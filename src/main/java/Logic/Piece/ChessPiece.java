@@ -109,6 +109,7 @@ public class ChessPiece {
         clone.setEnPassant(enPassant);
         clone.setMovePattern(movePattern);
         clone.setHasMoved(hasMoved);
+        clone.color=color;
         clone.setPossibleMoves(List.copyOf(possibleMoves));
         return clone;
     }

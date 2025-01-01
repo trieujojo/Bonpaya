@@ -125,7 +125,6 @@ public class HelloController {
                 new ChangeListener<Number>() {
                     @Override
                     public void changed(ObservableValue<? extends Number> observableValue, Number value, Number newVal) {
-                        System.out.println(newVal+ " "+ value+ " "+observableValue);
                         if(newVal.equals(1)) computerPlay=true;
                         else computerPlay=false;
                     }
@@ -189,7 +188,7 @@ public class HelloController {
                     new HumanPlayer("player 2",false,this));
         }else{
             gameLogic.setPlayers(new HumanPlayer("player 1",true,this),
-                    new MiniMaxPlayer("computer",false,this,gameLogic.getBoard(),4));
+                    new MiniMaxPlayer("computer",false,this,gameLogic.getBoard(),Parameters.getDepth()));
         }
     }
     private void backMoveHandler(ActionEvent actionEvent) {
@@ -234,15 +233,13 @@ public class HelloController {
     }
 
     private void backButtonHandler(ActionEvent actionEvent){
-        System.out.println("test");
         if(!computerPlay){
             gameLogic.setPlayers(new HumanPlayer("player 1",true,this),
                     new HumanPlayer("player 2",false,this));
         }else{
             gameLogic.setPlayers(new HumanPlayer("player 1",true,this),
-                    new MiniMaxPlayer("computer",false,this,gameLogic.getBoard(),4));
+                    new MiniMaxPlayer("computer",false,this,gameLogic.getBoard(),Parameters.getDepth()));
         }
-        System.out.println(gameLogic.getBlackPlayer().getName());
         app.getMainStage().setScene(homeScene);
         app.getMainStage().show();
     }
@@ -256,7 +253,6 @@ public class HelloController {
     public void clickGrid(javafx.scene.input.MouseEvent event) {
         Node clickedNode = event.getPickResult().getIntersectedNode();
         if (clickedNode != boardUI) {
-            System.out.println(gameLogic.getBlackPlayer().getName());
             if (gameLogic.isWhiteTurn() && gameLogic.getWhitePlayer() instanceof HumanPlayer ||
                     !gameLogic.isWhiteTurn() && gameLogic.getBlackPlayer() instanceof HumanPlayer) {
                 Integer colIndex = GridPane.getColumnIndex(clickedNode),
@@ -276,14 +272,14 @@ public class HelloController {
                 }
             }else{
                 Move m;
-                if(gameLogic.isWhiteTurn()){
-                   m = gameLogic.getWhitePlayer().getMove();
-                }else{
-                    m = gameLogic.getBlackPlayer().getMove();
-                }
+                if(gameLogic.isWhiteTurn()) m = gameLogic.getWhitePlayer().getMove(gameLogic.getBoard());
+                else m = gameLogic.getBlackPlayer().getMove(gameLogic.getBoard());
+
                 System.out.println("computing move");
-                gameLogic.movePiece(m.chessPiece(),m.destination(),true);
+                gameLogic.movePiece(gameLogic.getBoard().getArray().get(m.start()),m.destination(),true);
                 System.out.println("move completed");
+                System.out.println(m);
+                actualizeGrid();
             }
         }
     }
@@ -310,6 +306,8 @@ public class HelloController {
     public void promoteAI(String piece, String color){
         boardUI.getChildren().remove(imageViewSet.get(String.valueOf(gameLogic.getBoard().getMoveLog().getLast().chessPiece().getId())));
         ChessPiece np = gameLogic.promote(piece,(color));
+        chessPieceView(np,np.getColor());
+        actualizeGrid();
     }
 
 }

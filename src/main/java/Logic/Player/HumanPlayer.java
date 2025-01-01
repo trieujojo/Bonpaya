@@ -1,5 +1,6 @@
 package Logic.Player;
 
+import Logic.Board.Board;
 import Logic.GameFlow.Move;
 import com.example.bonpaya.HelloController;
 
@@ -21,7 +22,7 @@ public class HumanPlayer implements Player{
     }
 
     @Override
-    public Move getMove() {
+    public Move getMove(Board b) {
         return null;
     }
 

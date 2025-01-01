@@ -10,13 +10,13 @@ public class MiniMaxPlayer implements Player{
     private boolean white;
     private HelloController controller;
     private MiniMax miniMax;
+    private Board board;
 
     public MiniMaxPlayer(String name, boolean white, HelloController controller, Board b, int depth){
         this.name=name;
         this.white=white;
         this.controller=controller;
-        miniMax=new MiniMax(b,depth);
-
+        miniMax=new MiniMax(depth);
     }
     @Override
     public void promotePiece() {
@@ -28,8 +28,8 @@ public class MiniMaxPlayer implements Player{
     }
 
     @Override
-    public Move getMove() {
-        return miniMax.evaluate();
+    public Move getMove(Board b) {
+        return miniMax.evaluate(b,white);
     }
 
     @Override

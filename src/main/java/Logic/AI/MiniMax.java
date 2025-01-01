@@ -4,58 +4,71 @@ import Logic.Board.Board;
 import Logic.Board.Position;
 import Logic.GameFlow.Move;
 import Logic.GameFlow.MoveBack;
+import Logic.GameFlow.PossibleMoveChecker;
 import Logic.Piece.ChessPiece;
 
+import java.util.List;
+
 public class MiniMax {
-    private Board board;
+//    private Board board;
     private int depth;
     private Move chosenMove;
+    private int count = 0;
     
-    public MiniMax(Board board, int depth){
-        this.board=board;
+    public MiniMax(int depth){
         this.depth=depth;
     }
 
-    public Move evaluate(){
+    public Move evaluate(Board board, boolean white){
         Board clone = board.clone();
         clone.setFakeBoard(true);
-        evaluate(clone,depth,Integer.MIN_VALUE,Integer.MAX_VALUE,board.isWhiteTurn());
+        evaluate(clone,depth,Integer.MIN_VALUE,Integer.MAX_VALUE,white,true);
         return chosenMove;
     }
 
-    private int evaluate(Board board, int depth, int alpha,int beta ,boolean maximize){
+    private int evaluate(Board board, int depth, int alpha,int beta ,boolean maximize, boolean maxDepth){
         if(depth==0||board.isEndGame()){
             return staticEval1(board);
         }
         if(maximize){
             int maxEval = Integer.MIN_VALUE;
             for (int i = 0; i < board.getChessPieces().get("white").size() && beta>alpha; i++) {
-                for(Position p: board.getChessPieces().get("white").get(i).getPossibleMoves()){
-                    board.movePiece(board.getChessPieces().get("white").get(i),p);
-                    int eval = evaluate(board,depth-1,alpha,beta,!maximize);
-                    if(eval>maxEval){
-                        maxEval=eval;
-                        chosenMove= board.getMoveLog().getFirst();
+                ChessPiece currentPiece = board.getChessPieces().get("white").get(i);
+                List<Position> moves = Move.clonePositions(currentPiece.getPossibleMoves());
+                for (Position p : moves) {
+                    if(board.movePiece(board.getChessPieces().get("white").get(i),p)) {
+                        int eval = evaluate(board, depth - 1, alpha, beta, !maximize,false);
+                        if (eval > maxEval) {
+                            maxEval = eval;
+                            if(maxDepth) chosenMove = board.getMoveLog().getFirst();
+                        }
+                        alpha = Math.max(alpha, eval);
+                        MoveBack.moveBack(board);
+                        if (beta <= alpha) break;
+                    }else{
+                        System.out.println("missing move: " + currentPiece.getName()+currentPiece.getPosition()+"to"+ p);
                     }
-                    alpha=Math.max(alpha,eval);
-                    MoveBack.moveBack(board);
-                    if(beta<=alpha) break;
                 }
             }
             return maxEval;
         }else{
             int minEval=Integer.MAX_VALUE;
             for (int i = 0; i < board.getChessPieces().get("black").size() && beta>alpha; i++) {
-                for (Position p : board.getChessPieces().get("black").get(i).getPossibleMoves()) {
-                    board.movePiece(board.getChessPieces().get("black").get(i),p);
-                    int eval = evaluate(board,depth-1,alpha,beta,!maximize);
-                    if(eval<minEval){
-                        minEval=eval;
-                        chosenMove=board.getMoveLog().getFirst();
+                ChessPiece currentPiece = board.getChessPieces().get("black").get(i);
+                List<Position> moves = Move.clonePositions(currentPiece.getPossibleMoves());
+                for (Position p : moves) {
+                    if(board.movePiece(board.getChessPieces().get("black").get(i),p)){
+                        int eval = evaluate(board,depth-1,alpha,beta,!maximize,false);
+                        if(eval<minEval){
+                            minEval=eval;
+                            if(maxDepth) chosenMove=board.getMoveLog().getFirst();
+                        }
+                        beta = Math.min(beta,eval);
+                        MoveBack.moveBack(board);
+                        if(beta<=alpha) break;
+                    }else{
+                        System.out.println("missing move: " + currentPiece.getName()+currentPiece.getPosition()+"to"+ p);
                     }
-                    beta = Math.min(beta,eval);
-                    MoveBack.moveBack(board);
-                    if(beta<=alpha) break;
                 }
             }
             return minEval;
@@ -65,9 +78,9 @@ public class MiniMax {
     private int staticEval1(Board board){
         int sum=0;
         for(Move move :board.getMoveLog()){
-            addSum(sum,move.eatenPiece());
+            sum=addSum(sum,move.eatenPiece());
         }
-        return 0;
+        return sum;
     }
 
     private int addSum(int toAdd, ChessPiece cp){

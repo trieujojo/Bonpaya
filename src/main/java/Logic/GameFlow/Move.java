@@ -18,13 +18,21 @@ public record Move(Position start, Position destination, ChessPiece chessPiece, 
         return sb.toString();
     }
 
-public static Map<Position,Set<ChessPiece>> cloneBlocked(Map<Position,Set<ChessPiece>> origin){
-    Map<Position, Set<ChessPiece>> result = new HashMap<>();
-    for(Position p: origin.keySet()){
-        result.put(p,new HashSet<>());
-        for(ChessPiece cp : origin.get(p))
-            result.get(p).add(cp.clone());
+    public static Map<Position,Set<ChessPiece>> cloneBlocked(Map<Position,Set<ChessPiece>> origin){
+        Map<Position, Set<ChessPiece>> result = new HashMap<>();
+        for(Position p: origin.keySet()){
+            result.put(p,new HashSet<>());
+            for(ChessPiece cp : origin.get(p))
+                result.get(p).add(cp.clone());
+        }
+        return result;
     }
-    return result;
-}
+
+    public static List<Position> clonePositions(List<Position> origin){
+        LinkedList<Position> result = new LinkedList<>();
+        for(Position p:origin){
+            result.add(p.copy());
+        }
+        return result;
+    }
 }

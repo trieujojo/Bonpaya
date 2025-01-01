@@ -18,9 +18,16 @@ public class GameLogic {
     private Position promotionPos;
     private ChessPiece promotedPawn;
     private boolean endGame=false;
+    private boolean promotion = false;
 
     public GameLogic(){
         init();
+    }
+
+    public GameLogic(Board b){
+        this.board= b;
+        board.setLogic(this);
+        board.setFakeBoard(true);
     }
 
     private void init(){
@@ -28,12 +35,11 @@ public class GameLogic {
         HashMap<String, LinkedList<ChessPiece>> piecesSet = new HashMap<>();
         piecesSet.put("white",PieceFactory.getPiecesSet(board,true));
         piecesSet.put("black",PieceFactory.getPiecesSet(board,false));
-        PossibleMoveChecker.init(board);
         board.setChessPieces(piecesSet);
         this.board= board;
         for(String key : piecesSet.keySet())
             for(ChessPiece cp:piecesSet.get(key))
-                checkPossibleMove(cp);
+                checkPossibleMove(board,cp);
         board.setLogic(this);
     }
 
@@ -52,13 +58,18 @@ public class GameLogic {
     }
 
     public boolean movePiece(ChessPiece cp, Position pos){
-        System.out.println("fake?"+ board.isFakeBoard());
         board.setEatenThisTurn(false);
+        promotion = false;
         board.getArray().put(cp.getPosition(),null);
         List<ChessPiece> toCheckBack = new LinkedList<>();
         if(board.getArray().get(pos)!=null) {
             board.addEaten(board.getArray().get(pos));
-            board.getMoveLog().add(new Move(cp.getPosition(),pos,cp,board.getArray().get(pos),false,toCheckBack,cp.hasMoved()));
+            if(cp.getName().equals("pawn") && (pos.row()==0 || pos.row()==board.getSize()-1)) {
+                board.getMoveLog().add(new Move(cp.getPosition(), pos, cp, board.getArray().get(pos), true, toCheckBack, cp.hasMoved()));
+                promotePawn(cp,pos);
+                board.getChessPieces().get((cp.getColor())).remove(cp);
+                promotion = true;
+            }else  board.getMoveLog().add(new Move(cp.getPosition(),pos,cp,board.getArray().get(pos),false,toCheckBack,cp.hasMoved()));
         }else if(cp.getName().equals("king") && Math.abs(pos.col()-cp.getPosition().col())>1){
             board.getMoveLog().add(new Move(cp.getPosition(),pos,cp,null,false,toCheckBack,cp.hasMoved()));
             ChessPiece rook=board.getArray().get(pos.left());
@@ -69,37 +80,39 @@ public class GameLogic {
             board.changeTurn();
         }else if(cp.getName().equals("pawn") && enPassantEat(cp,pos)){
             board.getMoveLog().add(new Move(cp.getPosition(),pos,cp,board.getEatenLast(),false,toCheckBack,cp.hasMoved()));
+            board.getArray().put(board.getEatenLast().getPosition(),null);
         }else{
-            board.getMoveLog().add(new Move(cp.getPosition(),pos,cp,null,false,toCheckBack,cp.hasMoved()));
-        }
-        if(cp.getName().equals("pawn") && (pos.row()==0 || pos.row()==board.getSize()-1)){
-            board.getMoveLog().add(new Move(cp.getPosition(),pos,cp,board.getEatenLast(),true,toCheckBack,cp.hasMoved()));
-            promotePawn(cp,pos);
-            board.getChessPieces().get((cp.getColor())).remove(cp);
+            if(cp.getName().equals("pawn") && (pos.row()==0 || pos.row()==board.getSize()-1)) {
+                board.getMoveLog().add(new Move(cp.getPosition(), pos, cp, null, true, toCheckBack, cp.hasMoved()));
+                promotePawn(cp,pos);
+                board.getChessPieces().get((cp.getColor())).remove(cp);
+                promotion = true;
+            }else board.getMoveLog().add(new Move(cp.getPosition(),pos,cp,null,false,toCheckBack,cp.hasMoved()));
         }
 
-        board.getArray().put(pos,cp);
         Position oldPos = cp.getPosition();
-        cp.movePiece(pos);
-
+        if(!promotion){
+            board.getArray().put(pos, cp);
+            cp.movePiece(pos);
+        }
         if(board.getOnLeave().containsKey(oldPos)){
             for(ChessPiece piece: board.getOnLeave().get(oldPos)){
-                checkPossibleMove(piece);
+                checkPossibleMove(board,piece);
                 toCheckBack.add(piece);
             }
             board.removeOnLeav(oldPos);
         }
         if(board.getOnArriv().containsKey(pos)){
             for(ChessPiece piece: board.getOnArriv().get(pos)){
-                checkPossibleMove(piece);
+                checkPossibleMove(board,piece);
                 toCheckBack.add(piece);
             }
-
             board.removeOnArriv(pos);
         }
+
         if(board.isEatenThisTurn() && board.getOnLeave().containsKey(pos)) {
             for(ChessPiece piece:board.getOnLeave().get(pos)) {
-                checkPossibleMove(piece);
+                checkPossibleMove(board,piece);
                 toCheckBack.add(piece);
             }
             board.removeOnLeav(pos);
@@ -118,7 +131,7 @@ public class GameLogic {
 
     private void promotePawn(ChessPiece cp,Position pos) {
         promotedPawn=cp;
-        promotionPos = pos;
+        promotionPos=pos;
         if(board.isFakeBoard()){
             if(isWhiteTurn())
                 promote("queen","white");
@@ -133,10 +146,11 @@ public class GameLogic {
     }
 
     public ChessPiece promote(String choice, String color){
-        ChessPiece newPiece = PieceFactory.getSingle(choice,promotedPawn.getId()*100,promotedPawn.getPosition());
+        ChessPiece newPiece = PieceFactory.getSingle(choice,
+                promotedPawn.getId()+(20*(promotedPawn.getId()>0?1:-1)),promotionPos);
         board.getChessPieces().get(color).add(newPiece);
-        board.getArray().put(promotedPawn.getPosition(),newPiece);
-        PossibleMoveChecker.checkPossibleMove(newPiece);
+        board.getArray().put(promotionPos,newPiece);
+        PossibleMoveChecker.checkPossibleMove(board,newPiece);
         return newPiece;
     }
 
@@ -163,6 +177,7 @@ public class GameLogic {
             }
         }return false;
     }
+
 
     private void checkNextTo(Position pos, Position next,ChessPiece cp){
         if(next != null && board.getArray().get(next)!= null && board.getArray().get(next).getName().equals("pawn") &&

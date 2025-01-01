@@ -4,6 +4,7 @@ public class Parameters {
     private static int boardSize=8;
     private static int screenWidth = 1000;
     private static int screenHeight = 700;
+    private static int depth=3;
 
     public static int boardSize() {
         return boardSize;
@@ -27,5 +28,17 @@ public class Parameters {
 
     public static void setScreenHeight(int screenHeight) {
         Parameters.screenHeight = screenHeight;
+    }
+
+    public static int getDepth() {
+        return depth;
+    }
+
+    public static void setDepth(int depth) {
+        Parameters.depth = depth;
+    }
+
+    public static int getBoardSize() {
+        return boardSize;
     }
 }

@@ -2,6 +2,7 @@ package Logic.Board;
 
 import Logic.GameFlow.GameLogic;
 import Logic.GameFlow.Move;
+import Logic.GameFlow.PossibleMoveChecker;
 import Logic.Piece.ChessPiece;
 import Logic.Piece.PieceFactory;
 
@@ -41,6 +42,10 @@ public class Board {
         this.logic = logic;
     }
 
+    public GameLogic getLogic() {
+        return logic;
+    }
+
     public Map<Position, ChessPiece> getArray() {
         return board;
     }
@@ -64,13 +69,16 @@ public class Board {
     public Board clone(){
         Board clone = new Board(size);
         clone.setWhiteTurn(whiteTurn);
-        clone.setLogic(new GameLogic());
-        clone.logic.setBoard(clone);
+
         clone.setChessPieces(new HashMap<String, LinkedList<ChessPiece>>());
         for(String key: chessPieces.keySet()) {
             clone.chessPieces.put(key, PieceFactory.cloneSet(chessPieces.get(key)));
             for(ChessPiece chessPiece: clone.chessPieces.get(key)) clone.board.put(chessPiece.getPosition(),chessPiece);
         }
+        for(String key: chessPieces.keySet())
+            for(ChessPiece chessPiece: clone.chessPieces.get(key)) PossibleMoveChecker.checkPossibleMove(clone,chessPiece);
+
+        clone.setLogic(new GameLogic(clone));
 //
         clone.blocked = Move.cloneBlocked(blocked);
         clone.blocking = Move.cloneBlocked(blocking);
