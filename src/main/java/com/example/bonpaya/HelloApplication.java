@@ -8,7 +8,6 @@ import javafx.stage.Stage;
 public class HelloApplication extends Application {
     private Stage mainStage;
 
-
     @Override
     public void start(Stage stage) {
         this.mainStage =stage;
@@ -23,10 +22,8 @@ public class HelloApplication extends Application {
         return mainStage;
     }
 
-
     public static void main(String[] args) {
         launch();
     }
-
 
 }

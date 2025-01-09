@@ -5,6 +5,8 @@ import Logic.GameFlow.Move;
 import Logic.GameFlow.PossibleMoveChecker;
 import Logic.Piece.ChessPiece;
 import Logic.Piece.PieceFactory;
+import Logic.Player.HumanPlayer;
+import Logic.Player.Player;
 
 import java.util.*;
 
@@ -20,11 +22,11 @@ public class Board {
     private LinkedList<ChessPiece> eatenPieces;
     private boolean eatenThisTurn = false;
     private boolean endGame= false;
-    private boolean fakeBoard=false;
+    private boolean fakeBoard;
 
 
 
-    public Board(int size) {
+    public Board(int size, boolean fake) {
         this.size = size;
         board = new HashMap<>();
         for (int i = 0; i < size; i++) {
@@ -32,10 +34,20 @@ public class Board {
                 board.put(new Position(i,j),null);
             }
         }
+        this.fakeBoard = fake;
         blocked= new HashMap<>();
+        chessPieces = new HashMap<>();
+        if(!fake) {
+            chessPieces.put("white", PieceFactory.getPiecesSet(this, true));
+            chessPieces.put("black", PieceFactory.getPiecesSet(this, false));
+            for (String key : chessPieces.keySet())
+                for (ChessPiece p : chessPieces.get(key))
+                    board.put(p.getPosition(), p);
+        }
         blocking = new HashMap<>();
         moveLog = new LinkedList<>();
         eatenPieces=new LinkedList<>();
+        logic=new GameLogic(this);
     }
 
     public void setLogic(GameLogic logic) {
@@ -67,19 +79,25 @@ public class Board {
     }
 
     public Board clone(){
-        Board clone = new Board(size);
+        Board clone = new Board(size, true);
         clone.setWhiteTurn(whiteTurn);
 
-        clone.setChessPieces(new HashMap<String, LinkedList<ChessPiece>>());
-        for(String key: chessPieces.keySet()) {
-            clone.chessPieces.put(key, PieceFactory.cloneSet(chessPieces.get(key)));
-            for(ChessPiece chessPiece: clone.chessPieces.get(key)) clone.board.put(chessPiece.getPosition(),chessPiece);
+        for(Position p: board.keySet())
+            if(board.get(p)!=null) clone.board.put(p,board.get(p).clone());
+        clone.chessPieces=new HashMap<>();
+        clone.chessPieces.put("white",new LinkedList<>());
+        clone.chessPieces.put("black",new LinkedList<>());
+        for(ChessPiece cp:clone.board.values()) if(cp!=null){
+            if(cp.isWhite()) clone.chessPieces.get("white").add(cp);
+            else clone.chessPieces.get("black").add(cp);
         }
-        for(String key: chessPieces.keySet())
-            for(ChessPiece chessPiece: clone.chessPieces.get(key)) PossibleMoveChecker.checkPossibleMove(clone,chessPiece);
 
-        clone.setLogic(new GameLogic(clone));
-//
+//        for(Position p: board.keySet())
+//            if(board.get(p)!=null) if(!board.get(p).getPosition().equals(p)) System.out.println("updated position wrong:"+board.get(p));
+
+//        for(String key: chessPieces.keySet())
+//            for(ChessPiece chessPiece: clone.chessPieces.get(key)) PossibleMoveChecker.checkPossibleMove(clone,chessPiece);
+        clone.logic=new GameLogic(clone);
         clone.blocked = Move.cloneBlocked(blocked);
         clone.blocking = Move.cloneBlocked(blocking);
         clone.eatenThisTurn = eatenThisTurn;
@@ -143,7 +161,6 @@ public class Board {
     }
 
     public ChessPiece getEatenLast(){
-//        eatenThisTurn=false;
         return eatenPieces.getLast();
     }
 
@@ -179,5 +196,54 @@ public class Board {
 
     public void setFakeBoard(boolean fakeBoard) {
         this.fakeBoard = fakeBoard;
+    }
+
+    public void setPlayers(Player p1,Player p2){
+        logic.setPlayers(p1,p2);
+    }
+
+    public Player getWhitePlayer(){
+        return logic.getWhitePlayer();
+    }
+    public Player getBlackPlayer(){
+        return logic.getBlackPlayer();
+    }
+
+    public Position getPromotionPos(){
+        return logic.getPromotionPos();
+    }
+
+    public ChessPiece getPromotedPawn(){
+        return logic.getPromotedPawn();
+    }
+
+    public ChessPiece promote(String choice, String color){
+        return logic.promote(choice,color);
+    }
+
+    public boolean isPlayerTurn(){
+        if(isWhiteTurn()) return getWhitePlayer() instanceof HumanPlayer;
+        else return getBlackPlayer() instanceof HumanPlayer;
+    }
+
+    public Board newGame(){
+        return logic.newGame();
+    }
+
+    public void print(){
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                if(board.get(new Position(i,j))== null) sb.append("_");
+                else if (board.get(new Position(i,j)).getName().equals("pawn")) sb.append("p");
+                else if (board.get(new Position(i,j)).getName().equals("rook")) sb.append("R");
+                else if (board.get(new Position(i,j)).getName().equals("bishop")) sb.append("B");
+                else if (board.get(new Position(i,j)).getName().equals("knight")) sb.append("k");
+                else if (board.get(new Position(i,j)).getName().equals("queen")) sb.append("Q");
+                else if (board.get(new Position(i,j)).getName().equals("king")) sb.append("K");
+            }
+            sb.append("\n");
+        }
+        System.out.println(sb);
     }
 }

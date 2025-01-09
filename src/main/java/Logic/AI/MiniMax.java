@@ -4,7 +4,6 @@ import Logic.Board.Board;
 import Logic.Board.Position;
 import Logic.GameFlow.Move;
 import Logic.GameFlow.MoveBack;
-import Logic.GameFlow.PossibleMoveChecker;
 import Logic.Piece.ChessPiece;
 
 import java.util.List;
@@ -13,15 +12,13 @@ public class MiniMax {
 //    private Board board;
     private int depth;
     private Move chosenMove;
-    private int count = 0;
-    
+
     public MiniMax(int depth){
         this.depth=depth;
     }
 
     public Move evaluate(Board board, boolean white){
         Board clone = board.clone();
-        clone.setFakeBoard(true);
         evaluate(clone,depth,Integer.MIN_VALUE,Integer.MAX_VALUE,white,true);
         return chosenMove;
     }
@@ -36,7 +33,8 @@ public class MiniMax {
                 ChessPiece currentPiece = board.getChessPieces().get("white").get(i);
                 List<Position> moves = Move.clonePositions(currentPiece.getPossibleMoves());
                 for (Position p : moves) {
-                    if(board.movePiece(board.getChessPieces().get("white").get(i),p)) {
+//                    PossibleMoveChecker.checkPossibleMove(board,currentPiece);
+                    if(board.movePiece(currentPiece,p)) {
                         int eval = evaluate(board, depth - 1, alpha, beta, !maximize,false);
                         if (eval > maxEval) {
                             maxEval = eval;
@@ -46,7 +44,8 @@ public class MiniMax {
                         MoveBack.moveBack(board);
                         if (beta <= alpha) break;
                     }else{
-                        System.out.println("missing move: " + currentPiece.getName()+currentPiece.getPosition()+"to"+ p);
+                        System.out.println("missing move: " + currentPiece.getName()+currentPiece.getPosition()+"to"+ p+"depth:"+depth);
+//                        board.print();
                     }
                 }
             }
@@ -57,7 +56,8 @@ public class MiniMax {
                 ChessPiece currentPiece = board.getChessPieces().get("black").get(i);
                 List<Position> moves = Move.clonePositions(currentPiece.getPossibleMoves());
                 for (Position p : moves) {
-                    if(board.movePiece(board.getChessPieces().get("black").get(i),p)){
+//                    PossibleMoveChecker.checkPossibleMove(board,currentPiece);
+                    if(board.movePiece(currentPiece,p)){
                         int eval = evaluate(board,depth-1,alpha,beta,!maximize,false);
                         if(eval<minEval){
                             minEval=eval;
@@ -67,7 +67,8 @@ public class MiniMax {
                         MoveBack.moveBack(board);
                         if(beta<=alpha) break;
                     }else{
-                        System.out.println("missing move: " + currentPiece.getName()+currentPiece.getPosition()+"to"+ p);
+                        System.out.println("missing move: " + currentPiece.getName()+currentPiece.getPosition()+"to"+ p+"depth:"+depth);
+//                        board.print();
                     }
                 }
             }

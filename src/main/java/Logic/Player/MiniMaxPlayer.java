@@ -10,17 +10,18 @@ public class MiniMaxPlayer implements Player{
     private boolean white;
     private HelloController controller;
     private MiniMax miniMax;
-    private Board board;
+    private int depth;
 
-    public MiniMaxPlayer(String name, boolean white, HelloController controller, Board b, int depth){
+    public MiniMaxPlayer(String name, boolean white, HelloController controller, int depth){
         this.name=name;
         this.white=white;
         this.controller=controller;
         miniMax=new MiniMax(depth);
+        this.depth=depth;
     }
     @Override
     public void promotePiece() {
-        controller.promoteAI("queen",white? "white":"black");
+        controller.promote("queen",white? "white":"black");
     }
 
     public void fakePromotion(){
@@ -56,4 +57,6 @@ public class MiniMaxPlayer implements Player{
     public void setController(HelloController controller) {
         this.controller = controller;
     }
+
+
 }

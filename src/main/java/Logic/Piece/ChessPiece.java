@@ -58,9 +58,8 @@ public class ChessPiece {
             if(Math.abs(position.row()-this.position.row())==2 && name.equals("pawn")) enPassant=true;
             else enPassant=false;
         }else enPassant=false;
-
         hasMoved=true;
-        setPosition(position);
+        this.position=position;
         return true;
     }
 
@@ -103,6 +102,10 @@ public class ChessPiece {
         this.enPassant = enPassant;
     }
 
+    public boolean isWhite(){
+        return color.equals("white");
+    }
+
     public ChessPiece clone(){
         ChessPiece clone = new ChessPiece(name, color,id);
         clone.setPosition(position.copy());
@@ -118,14 +121,16 @@ public class ChessPiece {
     public String toString(){
         StringBuilder sb= new StringBuilder();
         sb.append(name);
+        sb.append(" ");
         sb.append(id);
-        sb.append("\r");
+        if(possibleMoves.size()>0) sb.append("\n");
         for(Position p : possibleMoves) sb.append(p);
         return sb.toString();
     }
 
     @Override
     public boolean equals(Object other){
+        if(this==other) return true;
         if(other==null){
             if(this==null) return true;
             return false;

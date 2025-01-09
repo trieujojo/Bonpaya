@@ -4,7 +4,7 @@ public class Parameters {
     private static int boardSize=8;
     private static int screenWidth = 1000;
     private static int screenHeight = 700;
-    private static int depth=3;
+    private static int depth=4;
 
     public static int boardSize() {
         return boardSize;

@@ -29,11 +29,15 @@ public class MoveBack {
                     board.changeTurn();
                 }
             }
+            board.setEndGame(false);
             for (ChessPiece cp : moveLog.checkThose()) {
                 checkPossibleMove(board,cp);
             }
             checkPossibleMove(board, moveLog.chessPiece());
             board.changeTurn();
+        }else{
+            System.out.println("outOfMoveLog!!!");
+            board.print();
         }
     }
 }

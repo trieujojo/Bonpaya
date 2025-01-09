@@ -17,30 +17,13 @@ public class GameLogic {
     private Player player2;
     private Position promotionPos;
     private ChessPiece promotedPawn;
-    private boolean endGame=false;
     private boolean promotion = false;
-
-    public GameLogic(){
-        init();
-    }
 
     public GameLogic(Board b){
         this.board= b;
-        board.setLogic(this);
-        board.setFakeBoard(true);
-    }
-
-    private void init(){
-        Board board = new Board(Parameters.boardSize());
-        HashMap<String, LinkedList<ChessPiece>> piecesSet = new HashMap<>();
-        piecesSet.put("white",PieceFactory.getPiecesSet(board,true));
-        piecesSet.put("black",PieceFactory.getPiecesSet(board,false));
-        board.setChessPieces(piecesSet);
-        this.board= board;
-        for(String key : piecesSet.keySet())
-            for(ChessPiece cp:piecesSet.get(key))
-                checkPossibleMove(board,cp);
-        board.setLogic(this);
+        for(Position pos: b.getArray().keySet())
+            if(b.getArray().get(pos)!=null)
+                PossibleMoveChecker.checkPossibleMove(b,b.getArray().get(pos));
     }
 
     public void setPlayers(Player p1, Player p2){
@@ -58,75 +41,82 @@ public class GameLogic {
     }
 
     public boolean movePiece(ChessPiece cp, Position pos){
-        board.setEatenThisTurn(false);
-        promotion = false;
-        board.getArray().put(cp.getPosition(),null);
-        List<ChessPiece> toCheckBack = new LinkedList<>();
-        if(board.getArray().get(pos)!=null) {
-            board.addEaten(board.getArray().get(pos));
-            if(cp.getName().equals("pawn") && (pos.row()==0 || pos.row()==board.getSize()-1)) {
-                board.getMoveLog().add(new Move(cp.getPosition(), pos, cp, board.getArray().get(pos), true, toCheckBack, cp.hasMoved()));
-                promotePawn(cp,pos);
+        if(!board.isEndGame()) {
+            board.setEatenThisTurn(false);
+            promotion = false;
+            board.getArray().put(cp.getPosition(), null);
+            List<ChessPiece> toCheckBack = new LinkedList<>();
+            addMoveToLog(board,cp,pos,toCheckBack);
+
+            Position oldPos = cp.getPosition();//position of piece before the move
+            if (promotion) {
+                promotePawn(cp, pos);
                 board.getChessPieces().get((cp.getColor())).remove(cp);
+            }else{
+                board.getArray().put(pos, cp);
+                cp.movePiece(pos);
+            }
+            if (board.getOnLeave().containsKey(oldPos)) {
+                for (ChessPiece piece : board.getOnLeave().get(oldPos)) {
+                    checkPossibleMove(board, piece);
+                    toCheckBack.add(piece);
+                }
+                board.removeOnLeav(oldPos);
+            }
+            if (board.getOnArriv().containsKey(pos)) {
+                for (ChessPiece piece : board.getOnArriv().get(pos)) {
+                    checkPossibleMove(board, piece);
+                    toCheckBack.add(piece);
+                }
+                board.removeOnArriv(pos);
+            }
+
+            if (board.isEatenThisTurn() && board.getOnLeave().containsKey(pos)) {
+                for (ChessPiece piece : board.getOnLeave().get(pos)) {
+                    checkPossibleMove(board, piece);
+                    toCheckBack.add(piece);
+                }
+                board.removeOnLeav(pos);
+            }
+
+            if (board.getMoveLog().getLast().eatenPiece() != null) {
+                board.getChessPieces().get((isWhiteTurn()) ? "black" : "white").remove(board.getMoveLog().getLast().eatenPiece());
+                if (board.getMoveLog().getLast().eatenPiece().getName().equals("king")) {
+                    board.setEndGame(true);
+                }
+            }
+            PossibleMoveChecker.checkPossibleMove(board,cp);
+            board.changeTurn();
+            return true;
+        }return false;
+    }
+
+    private void addMoveToLog(Board board, ChessPiece cp, Position pos, List<ChessPiece> toCheckBack){
+        if (board.getArray().get(pos) != null) {
+            board.addEaten(board.getArray().get(pos));
+            if (cp.getName().equals("pawn") && (pos.row() == 0 || pos.row() == board.getSize() - 1)) {
+                board.getMoveLog().add(new Move(cp.getPosition(), pos, cp, board.getArray().get(pos), true, toCheckBack, cp.hasMoved()));
                 promotion = true;
-            }else  board.getMoveLog().add(new Move(cp.getPosition(),pos,cp,board.getArray().get(pos),false,toCheckBack,cp.hasMoved()));
-        }else if(cp.getName().equals("king") && Math.abs(pos.col()-cp.getPosition().col())>1){
-            board.getMoveLog().add(new Move(cp.getPosition(),pos,cp,null,false,toCheckBack,cp.hasMoved()));
-            ChessPiece rook=board.getArray().get(pos.left());
-            if(rook!=null){
-                movePiece(rook,pos.right());
+            } else
+                board.getMoveLog().add(new Move(cp.getPosition(), pos, cp, board.getArray().get(pos), false, toCheckBack, cp.hasMoved()));
+        } else if (cp.getName().equals("king") && Math.abs(pos.col() - cp.getPosition().col()) > 1) {
+            board.getMoveLog().add(new Move(cp.getPosition(), pos, cp, null, false, toCheckBack, cp.hasMoved()));
+            ChessPiece rook = board.getArray().get(pos.left());
+            if (rook != null) {
+                movePiece(rook, pos.right());
             }
             cp.setEnPassant(true);
             board.changeTurn();
-        }else if(cp.getName().equals("pawn") && enPassantEat(cp,pos)){
-            board.getMoveLog().add(new Move(cp.getPosition(),pos,cp,board.getEatenLast(),false,toCheckBack,cp.hasMoved()));
-            board.getArray().put(board.getEatenLast().getPosition(),null);
-        }else{
-            if(cp.getName().equals("pawn") && (pos.row()==0 || pos.row()==board.getSize()-1)) {
+        } else if (cp.getName().equals("pawn") && enPassantEat(cp, pos)) {
+            board.getMoveLog().add(new Move(cp.getPosition(), pos, cp, board.getEatenLast(), false, toCheckBack, cp.hasMoved()));
+            board.getArray().put(board.getEatenLast().getPosition(), null);
+        } else {
+            if (cp.getName().equals("pawn") && (pos.row() == 0 || pos.row() == board.getSize() - 1)) {
                 board.getMoveLog().add(new Move(cp.getPosition(), pos, cp, null, true, toCheckBack, cp.hasMoved()));
-                promotePawn(cp,pos);
-                board.getChessPieces().get((cp.getColor())).remove(cp);
                 promotion = true;
-            }else board.getMoveLog().add(new Move(cp.getPosition(),pos,cp,null,false,toCheckBack,cp.hasMoved()));
+            } else
+                board.getMoveLog().add(new Move(cp.getPosition(), pos, cp, null, false, toCheckBack, cp.hasMoved()));
         }
-
-        Position oldPos = cp.getPosition();
-        if(!promotion){
-            board.getArray().put(pos, cp);
-            cp.movePiece(pos);
-        }
-        if(board.getOnLeave().containsKey(oldPos)){
-            for(ChessPiece piece: board.getOnLeave().get(oldPos)){
-                checkPossibleMove(board,piece);
-                toCheckBack.add(piece);
-            }
-            board.removeOnLeav(oldPos);
-        }
-        if(board.getOnArriv().containsKey(pos)){
-            for(ChessPiece piece: board.getOnArriv().get(pos)){
-                checkPossibleMove(board,piece);
-                toCheckBack.add(piece);
-            }
-            board.removeOnArriv(pos);
-        }
-
-        if(board.isEatenThisTurn() && board.getOnLeave().containsKey(pos)) {
-            for(ChessPiece piece:board.getOnLeave().get(pos)) {
-                checkPossibleMove(board,piece);
-                toCheckBack.add(piece);
-            }
-            board.removeOnLeav(pos);
-        }
-
-        if(board.getMoveLog().getLast().eatenPiece()!=null) {
-            board.getChessPieces().get((isWhiteTurn()) ? "black" : "white").remove(board.getMoveLog().getLast().eatenPiece());
-            if(board.getMoveLog().getLast().eatenPiece().getName().equals("king")) {
-                endGame=true;
-                board.setEndGame(true);
-            }
-        }
-        board.changeTurn();
-        return true;
     }
 
     private void promotePawn(ChessPiece cp,Position pos) {
@@ -195,11 +185,12 @@ public class GameLogic {
         return board;
     }
 
-    public void changeTurn(){
-        board.changeTurn();
-    }
     public boolean isWhiteTurn(){
         return board.isWhiteTurn();
+    }
+
+    public Position getPromotionPos() {
+        return promotionPos;
     }
 
     public Player getPlayer1() {
@@ -210,12 +201,17 @@ public class GameLogic {
         return player2;
     }
 
-    public Position getPromotionPos() {
-        return promotionPos;
-    }
-
-    public boolean isEndGame() {
-        return endGame;
+    public Board newGame(){
+        Board board = new Board(Parameters.boardSize(),false);
+        HashMap<String, LinkedList<ChessPiece>> piecesSet = new HashMap<>();
+        piecesSet.put("white",PieceFactory.getPiecesSet(board,true));
+        piecesSet.put("black",PieceFactory.getPiecesSet(board,false));
+        board.setChessPieces(piecesSet);
+        this.board= board;
+        for(String key : piecesSet.keySet())
+            for(ChessPiece cp:piecesSet.get(key))
+                checkPossibleMove(board,cp);
+        return board;
     }
 
 }

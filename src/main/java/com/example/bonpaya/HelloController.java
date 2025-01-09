@@ -1,41 +1,26 @@
 package com.example.bonpaya;
 
-import Logic.Board.Position;
-import Logic.GameFlow.GameLogic;
-import Logic.GameFlow.Move;
-import Logic.GameFlow.MoveBack;
+import Logic.Board.*;
+import Logic.GameFlow.*;
 import Logic.Parameters;
 import Logic.Piece.ChessPiece;
-import Logic.Player.HumanPlayer;
-import Logic.Player.MiniMaxPlayer;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableStringValue;
-import javafx.beans.value.ObservableValue;
+import Logic.Player.*;
+import javafx.beans.value.*;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventHandler;
-import javafx.geometry.HPos;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
-import javafx.geometry.VPos;
-import javafx.scene.Group;
-import javafx.scene.Node;
-import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.ChoiceBox;
-import javafx.scene.control.Label;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
+import javafx.geometry.*;
+import javafx.scene.*;
+import javafx.scene.control.*;
+import javafx.scene.image.*;
 import javafx.scene.layout.*;
-import javafx.stage.Stage;
-
-import java.util.HashMap;
-import java.util.Map;
+import javafx.scene.text.Text;
+import javafx.stage.*;
+import java.util.*;
 
 public class HelloController {
+
     private HelloApplication app;
+
     private Scene homeScene;
     private Scene optionScene;
     private Scene gameScene;
@@ -43,12 +28,13 @@ public class HelloController {
     private BorderPane gamePane;
     private BorderPane homePane;
     private BorderPane optionPane;
+    private Stage dialog=null;
 
     private GridPane boardUI;
     private Pane[][] boardParts;
     private Map<String, ImageView> imageViewSet;
 
-    private GameLogic gameLogic;
+    private Board board;
     private ChessPiece pawnSelected;
     private boolean computerPlay = false;
 
@@ -56,7 +42,7 @@ public class HelloController {
     public void initUI(Stage stage){
         createHome();
         createOption();
-        gameLogic = new GameLogic();
+        board = new Board(Parameters.boardSize(),false);
         createGame();
         stage.setTitle("Bonpaya!");
     }
@@ -144,7 +130,7 @@ public class HelloController {
         gameScene = new Scene(gamePane,Logic.Parameters.getScreenWidth(), Logic.Parameters.getScreenHeight() );
         boardUI= new GridPane();
         boardUI.setOnMouseClicked(this::clickGrid);
-        int size = gameLogic.getBoard().getSize();
+        int size = board.getSize();
         boardParts = new Pane[size][size];
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
@@ -172,35 +158,36 @@ public class HelloController {
         backButton.setOnAction(this::backMoveHandler);
         gamePane.setBottom(backButton);
         gamePane.setCenter(boardUI);
-        for (ChessPiece cp: gameLogic.getBoard().getChessPieces().get("white")) {
+        for (ChessPiece cp: board.getChessPieces().get("white")) {
             chessPieceView(cp, "white");
         }
-        for (ChessPiece cp: gameLogic.getBoard().getChessPieces().get("black")) {
+        for (ChessPiece cp: board.getChessPieces().get("black")) {
             chessPieceView(cp, "black");
         }
         gamePane.setStyle("-fx-background-color: black;");
-       createPlayers();
-    } //todo
+        createPlayers();
+    }
 
     private void createPlayers(){
         if(!computerPlay){
-            gameLogic.setPlayers(new HumanPlayer("player 1",true,this),
+            board.setPlayers(new HumanPlayer("player 1",true,this),
                     new HumanPlayer("player 2",false,this));
         }else{
-            gameLogic.setPlayers(new HumanPlayer("player 1",true,this),
-                    new MiniMaxPlayer("computer",false,this,gameLogic.getBoard(),Parameters.getDepth()));
+            board.setPlayers(new HumanPlayer("player 1",true,this),
+                    new MiniMaxPlayer("computer",false,this,Parameters.getDepth()));
         }
     }
     private void backMoveHandler(ActionEvent actionEvent) {
-        MoveBack.moveBack(gameLogic.getBoard());
+        MoveBack.moveBack(board);
         actualizeGrid();
     }
 
     private void actualizeGrid() {
         clearGrid();
-        for(Position pos: gameLogic.getBoard().getArray().keySet()){
-            if(gameLogic.getBoard().getArray().get(pos)!=null) boardUI.add(imageViewSet.get(String.valueOf(gameLogic.getBoard().getArray().get(pos).getId())), pos.col(), pos.row());
+        for(Position pos: board.getArray().keySet()){
+            if(board.getArray().get(pos)!=null) boardUI.add(imageViewSet.get(String.valueOf(board.getArray().get(pos).getId())), pos.col(), pos.row());
         }
+        if(board.isEndGame()) popEnd();
     }
 
     private void clearGrid() {
@@ -233,15 +220,14 @@ public class HelloController {
     }
 
     private void backButtonHandler(ActionEvent actionEvent){
-        if(!computerPlay){
-            gameLogic.setPlayers(new HumanPlayer("player 1",true,this),
-                    new HumanPlayer("player 2",false,this));
-        }else{
-            gameLogic.setPlayers(new HumanPlayer("player 1",true,this),
-                    new MiniMaxPlayer("computer",false,this,gameLogic.getBoard(),Parameters.getDepth()));
-        }
+        createPlayers();
         app.getMainStage().setScene(homeScene);
         app.getMainStage().show();
+        if(dialog!=null){
+            dialog.close();
+            this.board = board.newGame();
+            createPlayers();
+        }
     }
 
     private void playButtonHandler(ActionEvent actionEvent) {
@@ -253,60 +239,86 @@ public class HelloController {
     public void clickGrid(javafx.scene.input.MouseEvent event) {
         Node clickedNode = event.getPickResult().getIntersectedNode();
         if (clickedNode != boardUI) {
-            if (gameLogic.isWhiteTurn() && gameLogic.getWhitePlayer() instanceof HumanPlayer ||
-                    !gameLogic.isWhiteTurn() && gameLogic.getBlackPlayer() instanceof HumanPlayer) {
+            if (board.isPlayerTurn()) {
                 Integer colIndex = GridPane.getColumnIndex(clickedNode),
                         rowIndex = GridPane.getRowIndex(clickedNode);
 //            System.out.println("Mouse clicked cell: " + colIndex + " And: " + rowIndex);
                 Position click = new Position(rowIndex, colIndex);
-                if (pawnSelected == null && gameLogic.getBoard().getArray().get(click) != null) {
-                    ChessPiece cp = gameLogic.getBoard().getArray().get(click);
-                    if ((cp.getId() > 0 && gameLogic.isWhiteTurn() && gameLogic.getWhitePlayer() instanceof HumanPlayer)
-                            || (cp.getId() < 0 && !gameLogic.isWhiteTurn()) && gameLogic.getBlackPlayer() instanceof HumanPlayer)
-                        pawnSelected = gameLogic.getBoard().getArray().get(click);
-                } else if (pawnSelected != null) {
-                    if (gameLogic.movePiece(pawnSelected, click, true)) {
+                if(board.getArray().get(click)!=null){
+                    if(board.getArray().get(click).isWhite()==board.isWhiteTurn()) {
+                        if (board.getArray().get(click).equals(pawnSelected)) System.out.println(pawnSelected);
+                        pawnSelected = board.getArray().get(click);
+                    }else if (pawnSelected!=null && board.movePiece(pawnSelected, click))
                         actualizeGrid();
-                    }
+                }else if(pawnSelected!=null){
+                    if (board.movePiece(pawnSelected, click))
+                        actualizeGrid();
                     pawnSelected = null;
                 }
             }else{
                 Move m;
-                if(gameLogic.isWhiteTurn()) m = gameLogic.getWhitePlayer().getMove(gameLogic.getBoard());
-                else m = gameLogic.getBlackPlayer().getMove(gameLogic.getBoard());
-
                 System.out.println("computing move");
-                gameLogic.movePiece(gameLogic.getBoard().getArray().get(m.start()),m.destination(),true);
-                System.out.println("move completed");
+                if(board.isWhiteTurn()) m = board.getWhitePlayer().getMove(board);
+                else m = board.getBlackPlayer().getMove(board);
                 System.out.println(m);
+                if(board.movePiece(board.getArray().get(m.start()),m.destination())){
+                    System.out.println("move completed");
+                }else{
+                    for (Position p : board.getArray().keySet()){
+                        System.out.println(p+ " "+board.getArray().get(p));
+                    }
+                }
+
                 actualizeGrid();
             }
         }
     }
 
     public void promptPiecePromotion() {
-        ChoiceBox<String> box = new ChoiceBox<String>();
+        ChoiceBox<String> box = new ChoiceBox<>();
         ObservableList<String> oslist = box.getItems();
         oslist.addAll("Queen", "Rook","Bishop","Knight");
         box.getSelectionModel().selectFirst();
         Button okB = new Button("Promote");
         HBox newgrp =new HBox(box,okB);
         newgrp.setPrefSize(200,500);
-        newgrp.setStyle("-fx-background-color: "+gameLogic.getPromotedPawn().getColor()+";");
-        boardUI.add(newgrp,gameLogic.getPromotionPos().col(),gameLogic.getPromotionPos().row());
+        newgrp.setStyle("-fx-background-color: "+board.getPromotedPawn().getColor()+";");
+        boardUI.add(newgrp,board.getPromotionPos().col(),board.getPromotionPos().row());
         okB.setOnAction((actionEvent)->{
-            boardUI.getChildren().remove(imageViewSet.get(String.valueOf(gameLogic.getBoard().getMoveLog().getLast().chessPiece().getId())));
-            ChessPiece np = gameLogic.promote(box.getValue().toLowerCase(),(gameLogic.getPromotedPawn().getColor()));
+            promote(box.getValue().toLowerCase(),board.getPromotedPawn().getColor());
             boardUI.getChildren().remove(newgrp);
-            chessPieceView(np,np.getColor());
-            actualizeGrid();
         });
     }
 
-    public void promoteAI(String piece, String color){
-        boardUI.getChildren().remove(imageViewSet.get(String.valueOf(gameLogic.getBoard().getMoveLog().getLast().chessPiece().getId())));
-        ChessPiece np = gameLogic.promote(piece,(color));
+    public void promote(String piece, String color){
+        boardUI.getChildren().remove(imageViewSet.get(String.valueOf(board.getMoveLog().getLast().chessPiece().getId())));
+        ChessPiece np = board.promote(piece,color);
         chessPieceView(np,np.getColor());
+        actualizeGrid();
+    }
+
+    private void popEnd(){
+        //todo add going back to homescreen vs play again
+        dialog = new Stage();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.initOwner(app.getMainStage());
+        VBox dialogVbox = new VBox(20);
+        Button rematchB = new Button("Rematch"),homeB = new Button("Home");
+        homeB.setOnAction(this::backButtonHandler);
+        rematchB.setOnAction(this::newGame);
+        dialogVbox.getChildren().add(new Text("Game Over! The winner is the "+board.getMoveLog().getLast().chessPiece().getColor()+" player"));
+        dialogVbox.getChildren().add(homeB);
+        dialogVbox.getChildren().add(rematchB);
+        Scene dialogScene = new Scene(dialogVbox, 300, 200);
+        dialog.setScene(dialogScene);
+        dialog.show();
+    }
+    private void newGame(ActionEvent actionEvent){
+        Player p1 = board.getWhitePlayer(),p2=board.getBlackPlayer();
+        this.board = board.newGame();
+        board.setPlayers(p2,p1);
+        dialog.close();
+        dialog=null;
         actualizeGrid();
     }
 
