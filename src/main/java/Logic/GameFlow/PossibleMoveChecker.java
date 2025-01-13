@@ -17,14 +17,12 @@ public class PossibleMoveChecker {
                 verifyEmpty(board,pos.up().up(),cp);
             verifyPawnAttack(board,pos.upLeft(),cp);
             verifyPawnAttack(board,pos.upRight(),cp);
-//            enPassantCheckMove(board,pos,cp);
             break;
         case DOWN1:
             if(verifyEmpty(board,pos.down(),cp) && !cp.hasMoved())
                 verifyEmpty(board,pos.down().down(),cp);
             verifyPawnAttack(board,pos.downRight(),cp);
             verifyPawnAttack(board,pos.downLeft(),cp);
-//            enPassantCheckMove(board,pos,cp);
             break;
         case L:
             Position dest = pos.up();
@@ -121,24 +119,23 @@ public class PossibleMoveChecker {
     // return true if empty
     private static boolean verifyEmpty(Board board,Position destination, ChessPiece cp){
         if(destination==null) return false; //out of board
-        if(board.getArray().get(destination)==null) {
-            board.addOnArriv(destination,cp);
+        if(board.getArray().get(destination)==null) { //empty
+//            board.addOnArriv(destination,cp);
             return cp.addPossibleMove(destination, board);
-        } else {
-            board.addOnLeav(destination,cp);
-        }
+        } else
+            board.addOnLeav(destination,cp); //blocked by a piece
         return false;
     }
 
     private static boolean verifyPawnAttack(Board board,Position destination, ChessPiece cp){
         if(destination == null) return false;
-        if(board.getArray().get(destination)!= null && board.getArray().get(destination).getId()*cp.getId()<0) {
+        if(board.getArray().get(destination)!= null && board.getArray().get(destination).isWhite()!=cp.isWhite()) {
             cp.addPossibleMove(destination, board);
-            board.addOnLeav(destination,cp);
+//            board.addOnLeav(destination,cp);
         }else board.addOnArriv(destination,cp);
         Position enPassant = new Position(cp.getPosition().row(),destination.col());
         if(enPassant!=null){
-            if(board.getArray().get(enPassant)!=null && board.getArray().get(enPassant).getId()*cp.getId()<0
+            if(board.getArray().get(enPassant)!=null && board.getArray().get(enPassant).isWhite()!=cp.isWhite()
                     && board.getArray().get(enPassant).isEnPassant())
                 cp.getPossibleMoves().add(destination);
         }
@@ -147,35 +144,27 @@ public class PossibleMoveChecker {
 
     private static boolean verifyAttack(Board board,Position destination, ChessPiece cp){
         if(destination == null) return false;
-        if(board.getArray().get(destination)!=null && board.getArray().get(destination).getId() * cp.getId()<0)
-            cp.addPossibleMove(destination, board);
-        board.addOnLeav(destination,cp);
+        if(board.getArray().get(destination)!=null){
+            if(board.getArray().get(destination).isWhite()!=cp.isWhite()) cp.addPossibleMove(destination, board);
+            else { //allied piece
+                board.addOnArriv(destination,cp);//allied piece gets eaten
+                board.addOnLeav(destination,cp);//allied piece changes position
+            }
+        }
+
         return true;
     }
 
     //meant for knight and king
     private static boolean verifyEmptyAttack(Board board,Position destination, ChessPiece cp){
         if(destination == null) return false;
-        if(board.getArray().get(destination)==null||board.getArray().get(destination).getId() * cp.getId()<=0)
+        if(board.getArray().get(destination)==null||board.getArray().get(destination).isWhite()!=cp.isWhite())
             cp.addPossibleMove(destination,board);
-        else board.addOnLeav(destination,cp);
-        board.addOnArriv(destination,cp);
+        else if(board.getArray().get(destination)!=null) {
+            board.addOnLeav(destination,cp);
+            board.addOnArriv(destination,cp);
+        }
         return true;
     }
-    private static void enPassantCheckMove(Board board,Position pos, ChessPiece cp) {//todo move this
-        Position next= pos.left();
-        if(pos.row()< board.getSize() - 3 && pos.row()> 2){
-            checkNextTo(board,pos,next,cp);
-            next= pos.right();
-            checkNextTo(board,pos,next,cp);
-        }else cp.setEnPassant(false);
-    }
 
-    private static void checkNextTo(Board board,Position pos, Position next,ChessPiece cp){
-        if(next != null && board.getArray().get(next)!= null && board.getArray().get(next).getName().equals("pawn") &&
-                board.getArray().get(next).isEnPassant()) {
-            board.getArray().get(next)
-                    .addPossibleMove(new Position((pos.row()+(cp.getId()>0?1:-1)),next.col()),board);
-        }
-    }
 }

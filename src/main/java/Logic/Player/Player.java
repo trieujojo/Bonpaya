@@ -8,4 +8,5 @@ public interface Player {
     public Move getMove(Board b);
     public boolean isWhite();
     public String getName();
+    public void setWhite(boolean white);
 }

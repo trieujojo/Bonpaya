@@ -77,8 +77,11 @@ public class ChessPiece {
 
     public boolean addPossibleMove(Position position, Board board){
         possibleMoves.add(position);
-        if(board.getArray().get(position)==null) board.addOnArriv(position,this);
-        else board.addOnLeav(position,this);
+        if(board.getArray().get(position)==null) board.addOnArriv(position,this); //empty
+        else {
+            board.addOnLeav(position,this); //enemy occupies
+            board.addOnArriv(position,this); //ally gets eaten
+        }
         return true;
     }
 

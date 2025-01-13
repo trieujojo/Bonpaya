@@ -315,8 +315,10 @@ public class HelloController {
     }
     private void newGame(ActionEvent actionEvent){
         Player p1 = board.getWhitePlayer(),p2=board.getBlackPlayer();
+        p1.setWhite(!p1.isWhite());
+        p2.setWhite(!p2.isWhite());
         this.board = board.newGame();
-        board.setPlayers(p2,p1);
+        board.setPlayers(p1,p2);
         dialog.close();
         dialog=null;
         actualizeGrid();

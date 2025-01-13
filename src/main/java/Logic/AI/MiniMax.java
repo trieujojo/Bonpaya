@@ -45,7 +45,9 @@ public class MiniMax {
                         if (beta <= alpha) break;
                     }else{
                         System.out.println("missing move: " + currentPiece.getName()+currentPiece.getPosition()+"to"+ p+"depth:"+depth);
-//                        board.print();
+                        for(Move m:board.getMoveLog()) System.out.print(m+"-");
+                        System.out.println("");
+                        board.print();
                     }
                 }
             }
@@ -68,7 +70,9 @@ public class MiniMax {
                         if(beta<=alpha) break;
                     }else{
                         System.out.println("missing move: " + currentPiece.getName()+currentPiece.getPosition()+"to"+ p+"depth:"+depth);
-//                        board.print();
+                        for(Move m:board.getMoveLog()) System.out.print(m+"-");
+                        System.out.println("");
+                        board.print();
                     }
                 }
             }

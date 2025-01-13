@@ -40,21 +40,21 @@ public class GameLogic {
         else return player1;
     }
 
-    public boolean movePiece(ChessPiece cp, Position pos){
+    public boolean movePiece(ChessPiece cp, Position dest){
         if(!board.isEndGame()) {
             board.setEatenThisTurn(false);
             promotion = false;
             board.getArray().put(cp.getPosition(), null);
             List<ChessPiece> toCheckBack = new LinkedList<>();
-            addMoveToLog(board,cp,pos,toCheckBack);
+            addMoveToLog(board,cp,dest,toCheckBack);
 
             Position oldPos = cp.getPosition();//position of piece before the move
             if (promotion) {
-                promotePawn(cp, pos);
+                promotePawn(cp, dest);
                 board.getChessPieces().get((cp.getColor())).remove(cp);
             }else{
-                board.getArray().put(pos, cp);
-                cp.movePiece(pos);
+                board.getArray().put(dest, cp);
+                cp.movePiece(dest);
             }
             if (board.getOnLeave().containsKey(oldPos)) {
                 for (ChessPiece piece : board.getOnLeave().get(oldPos)) {
@@ -63,20 +63,21 @@ public class GameLogic {
                 }
                 board.removeOnLeav(oldPos);
             }
-            if (board.getOnArriv().containsKey(pos)) {
-                for (ChessPiece piece : board.getOnArriv().get(pos)) {
+            if (board.getOnArriv().containsKey(dest)) {
+                for (ChessPiece piece : board.getOnArriv().get(dest)) {
                     checkPossibleMove(board, piece);
                     toCheckBack.add(piece);
                 }
-                board.removeOnArriv(pos);
+                board.removeOnArriv(dest);
             }
 
-            if (board.isEatenThisTurn() && board.getOnLeave().containsKey(pos)) {
-                for (ChessPiece piece : board.getOnLeave().get(pos)) {
+            if (board.isEatenThisTurn() && board.getEatenLast().getPosition()!=dest &&
+                    board.getOnLeave().containsKey(board.getEatenLast().getPosition())) {
+                for (ChessPiece piece : board.getOnLeave().get(board.getEatenLast().getPosition())) {
                     checkPossibleMove(board, piece);
                     toCheckBack.add(piece);
                 }
-                board.removeOnLeav(pos);
+                board.removeOnLeav(board.getEatenLast().getPosition());
             }
 
             if (board.getMoveLog().getLast().eatenPiece() != null) {
@@ -107,7 +108,7 @@ public class GameLogic {
             }
             cp.setEnPassant(true);
             board.changeTurn();
-        } else if (cp.getName().equals("pawn") && enPassantEat(cp, pos)) {
+        } else if (cp.getName().equals("pawn") && enPassant(cp, pos)) {
             board.getMoveLog().add(new Move(cp.getPosition(), pos, cp, board.getEatenLast(), false, toCheckBack, cp.hasMoved()));
             board.getArray().put(board.getEatenLast().getPosition(), null);
         } else {
@@ -158,7 +159,7 @@ public class GameLogic {
         return false;
     }
 
-    private boolean enPassantEat(ChessPiece cp,Position position){
+    private boolean enPassant(ChessPiece cp, Position position){
         if(position.col()!=cp.getPosition().col() && getBoard().getArray().get(position)==null){
             ChessPiece expectedPawn = board.getArray().get(new Position(cp.getPosition().row(),position.col()));
             if(expectedPawn != null && expectedPawn.getName().equals("pawn") && expectedPawn.isEnPassant()){
@@ -166,15 +167,6 @@ public class GameLogic {
                 return true;
             }
         }return false;
-    }
-
-
-    private void checkNextTo(Position pos, Position next,ChessPiece cp){
-        if(next != null && board.getArray().get(next)!= null && board.getArray().get(next).getName().equals("pawn") &&
-                board.getArray().get(next).isEnPassant()) {
-            board.getArray().get(next)
-                    .getPossibleMoves().add(new Position((cp.getPosition().row()+pos.row())/2,pos.col()));
-        }
     }
 
     public void setBoard(Board board) {

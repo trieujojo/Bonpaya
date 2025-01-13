@@ -116,7 +116,10 @@ public class Board {
     //coordinates where arrival/removal of piece will change possible move of cp
     public boolean addOnLeav(Position pos, ChessPiece cp){
         if(blocked.containsKey(pos)) blocked.get(pos).add(cp);
-        else blocked.put(pos,new HashSet<>(Collections.singletonList(cp)));
+        else {
+            blocked.put(pos,new HashSet<>());
+            blocked.get(pos).add(cp);
+        }
         return true;
     }
 
@@ -135,7 +138,10 @@ public class Board {
     //coordinates where arrival/removal of piece will change possible move of cp
     public boolean addOnArriv(Position pos, ChessPiece cp){
         if(blocking.containsKey(pos)) return blocking.get(pos).add(cp);
-        else blocking.put(pos,new HashSet<>(Collections.singletonList(cp)));
+        else {
+            blocking.put(pos,new HashSet<>());
+            blocking.get(pos).add(cp);
+        }
         return true;
     }
 
