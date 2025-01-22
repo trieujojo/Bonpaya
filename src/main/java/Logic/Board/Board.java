@@ -92,11 +92,6 @@ public class Board {
             else clone.chessPieces.get("black").add(cp);
         }
 
-//        for(Position p: board.keySet())
-//            if(board.get(p)!=null) if(!board.get(p).getPosition().equals(p)) System.out.println("updated position wrong:"+board.get(p));
-
-//        for(String key: chessPieces.keySet())
-//            for(ChessPiece chessPiece: clone.chessPieces.get(key)) PossibleMoveChecker.checkPossibleMove(clone,chessPiece);
         clone.logic=new GameLogic(clone);
         clone.blocked = Move.cloneBlocked(blocked);
         clone.blocking = Move.cloneBlocked(blocking);
@@ -183,8 +178,20 @@ public class Board {
     public boolean uneaten() {
         if(eatenPieces.size()>0) {
             ChessPiece p = eatenPieces.removeLast();
-            getChessPieces().get(p.getId()>0?"white":"black").add(p);
+            return returnPiece(getChessPieces().get(p.getId()>0?"white":"black"),p);
         }
+        return false;
+    }
+
+    private boolean returnPiece(LinkedList<ChessPiece> list,ChessPiece cp){
+        for (int i = 0; i < list.size(); i++) {
+            if(Math.abs(list.get(i).getId())>Math.abs(cp.getId())) {
+                list.add(i,cp);
+                return true;
+            }
+        }
+        list.addLast(cp);
+
         return true;
     }
 

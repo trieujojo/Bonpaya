@@ -156,6 +156,8 @@ public class GameLogic {
     }
     private boolean verify(ChessPiece cp, Position newPos){
         if(cp.getPossibleMoves().contains(newPos)) return true;
+        PossibleMoveChecker.checkPossibleMove(board,cp);
+        if(cp.getPossibleMoves().contains(newPos)) return true;
         return false;
     }
 

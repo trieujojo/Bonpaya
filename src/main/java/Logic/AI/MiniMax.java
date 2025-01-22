@@ -29,11 +29,11 @@ public class MiniMax {
         }
         if(maximize){
             int maxEval = Integer.MIN_VALUE;
-            for (int i = 0; i < board.getChessPieces().get("white").size() && beta>alpha; i++) {
-                ChessPiece currentPiece = board.getChessPieces().get("white").get(i);
+            List<ChessPiece> pieces =board.getChessPieces().get("white");
+            for (int i = 0; i < pieces.size() && beta>alpha; i++) {
+                ChessPiece currentPiece = pieces.get(i);
                 List<Position> moves = Move.clonePositions(currentPiece.getPossibleMoves());
                 for (Position p : moves) {
-//                    PossibleMoveChecker.checkPossibleMove(board,currentPiece);
                     if(board.movePiece(currentPiece,p)) {
                         int eval = evaluate(board, depth - 1, alpha, beta, !maximize,false);
                         if (eval > maxEval) {
@@ -54,16 +54,17 @@ public class MiniMax {
             return maxEval;
         }else{
             int minEval=Integer.MAX_VALUE;
-            for (int i = 0; i < board.getChessPieces().get("black").size() && beta>alpha; i++) {
-                ChessPiece currentPiece = board.getChessPieces().get("black").get(i);
+            List<ChessPiece> pieces =board.getChessPieces().get("black");
+            for (int i = 0; i < pieces.size() && beta>alpha; i++) {
+                ChessPiece currentPiece = pieces.get(i);
                 List<Position> moves = Move.clonePositions(currentPiece.getPossibleMoves());
                 for (Position p : moves) {
-//                    PossibleMoveChecker.checkPossibleMove(board,currentPiece);
                     if(board.movePiece(currentPiece,p)){
                         int eval = evaluate(board,depth-1,alpha,beta,!maximize,false);
                         if(eval<minEval){
                             minEval=eval;
-                            if(maxDepth) chosenMove=board.getMoveLog().getFirst();
+                            if(maxDepth)
+                                chosenMove=board.getMoveLog().getFirst();
                         }
                         beta = Math.min(beta,eval);
                         MoveBack.moveBack(board);

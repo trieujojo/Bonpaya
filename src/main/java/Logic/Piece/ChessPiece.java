@@ -6,12 +6,12 @@ import Logic.Board.Position;
 import java.util.*;
 
 public class ChessPiece {
-    private String name;
-    private int id;
+    private final String name;
+    private final int id;
     private Position position; // row then col
     private MovePattern movePattern;
     private List<Position> possibleMoves;
-    private List<Position> blocked;
+//    private List<Position> blocked;
     private boolean hasMoved;
     private boolean enPassant;
     private String color;
@@ -19,7 +19,7 @@ public class ChessPiece {
     public ChessPiece(String name, String color, int id) {
         this.name = name;
         this.id = id;
-        blocked = new LinkedList<>();
+//        blocked = new LinkedList<>();
         possibleMoves=new LinkedList<>();
         this.color=color;
     }
@@ -28,7 +28,7 @@ public class ChessPiece {
         this.name = name;
         this.id = id;
         this.position=position;
-        blocked = new LinkedList<>();
+//        blocked = new LinkedList<>();
         possibleMoves=new LinkedList<>();
         this.color=color;
     }
@@ -55,8 +55,7 @@ public class ChessPiece {
 
     public boolean movePiece(Position position){
         if(!hasMoved){
-            if(Math.abs(position.row()-this.position.row())==2 && name.equals("pawn")) enPassant=true;
-            else enPassant=false;
+            enPassant= Math.abs(position.row() - this.position.row()) == 2 && name.equals("pawn");
         }else enPassant=false;
         hasMoved=true;
         this.position=position;
