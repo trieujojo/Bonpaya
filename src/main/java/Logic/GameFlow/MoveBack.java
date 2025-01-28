@@ -19,15 +19,22 @@ public class MoveBack {
             moveLog.chessPiece().setHasMoved(moveLog.hasMoved());
             if(moveLog.promotion()){
                 board.getChessPieces().get(moveLog.chessPiece().getColor()).removeLast();
+                moveLog.chessPiece().setPromoted(false);
                 board.getChessPieces().get(moveLog.chessPiece().getColor()).add(moveLog.chessPiece());
-            }
-            if (moveLog.chessPiece().getName().equals("rook") && board.getMoveLog().size()>0 &&
-                    board.getMoveLog().getLast().chessPiece().getName().equals("king")) {
-                Move k = board.getMoveLog().getLast();
-                if (Math.abs(k.start().col() - k.destination().col()) > 1) {
-                    moveBack(board);
-                    board.changeTurn();
-                }
+            }//todo
+//            if (moveLog.chessPiece().getName().equals("rook") && board.getMoveLog().size()>0 &&
+//                    board.getMoveLog().getLast().chessPiece().getName().equals("king")) {
+//                Move k = board.getMoveLog().getLast();
+//                if (Math.abs(k.start().col() - k.destination().col()) > 1) {
+//                    moveBack(board);
+//                    board.changeTurn();
+//                }
+//            }
+            if (moveLog.chessPiece().getName().equals("king") && Math.abs(moveLog.destination().col()-moveLog.start().col())>1) {
+                ChessPiece rook = board.getArray().get(moveLog.destination().right());
+                board.getArray().put(rook.getPosition(),null);
+                rook.setPosition(moveLog.destination().left());
+                board.getArray().put(rook.getPosition(),rook);
             }
             board.setEndGame(false);
             for (ChessPiece cp : moveLog.checkThose()) {

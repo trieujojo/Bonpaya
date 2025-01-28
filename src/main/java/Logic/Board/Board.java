@@ -2,7 +2,6 @@ package Logic.Board;
 
 import Logic.GameFlow.GameLogic;
 import Logic.GameFlow.Move;
-import Logic.GameFlow.PossibleMoveChecker;
 import Logic.Piece.ChessPiece;
 import Logic.Piece.PieceFactory;
 import Logic.Player.HumanPlayer;
@@ -23,6 +22,7 @@ public class Board {
     private boolean eatenThisTurn = false;
     private boolean endGame= false;
     private boolean fakeBoard;
+    private boolean superficial = false;
 
 
 
@@ -178,22 +178,23 @@ public class Board {
     public boolean uneaten() {
         if(eatenPieces.size()>0) {
             ChessPiece p = eatenPieces.removeLast();
-            return returnPiece(getChessPieces().get(p.getId()>0?"white":"black"),p);
+            p.setAlive(true);
+            return true;//returnPiece(getChessPieces().get(p.getColor()),p);
         }
         return false;
     }
 
-    private boolean returnPiece(LinkedList<ChessPiece> list,ChessPiece cp){
-        for (int i = 0; i < list.size(); i++) {
-            if(Math.abs(list.get(i).getId())>Math.abs(cp.getId())) {
-                list.add(i,cp);
-                return true;
-            }
-        }
-        list.addLast(cp);
-
-        return true;
-    }
+//    private boolean returnPiece(LinkedList<ChessPiece> list,ChessPiece cp){
+//        for (int i = 0; i < list.size(); i++) {
+//            if(Math.abs(list.get(i).getId())>Math.abs(cp.getId())) {
+//                list.add(i,cp);
+//                return true;
+//            }
+//        }
+//        list.addLast(cp);
+//
+//        return true;
+//    }
 
     public boolean isEndGame() {
         return endGame;
@@ -243,6 +244,10 @@ public class Board {
         return logic.newGame();
     }
 
+    public boolean isCheck(){
+        return logic.verifyCheck();
+    }
+
     public void print(){
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < size; i++) {
@@ -258,5 +263,32 @@ public class Board {
             sb.append("\n");
         }
         System.out.println(sb);
+    }
+
+    public Board cloneBrief() {
+        Board clone = new Board(size, true);
+        clone.setWhiteTurn(whiteTurn);
+
+        for(Position p: board.keySet())
+            if(board.get(p)!=null) clone.board.put(p,board.get(p).clone());
+        clone.chessPieces=new HashMap<>();
+        clone.chessPieces.put("white",new LinkedList<>());
+        clone.chessPieces.put("black",new LinkedList<>());
+        for(ChessPiece cp:clone.board.values()) if(cp!=null){
+            if(cp.isWhite()) clone.chessPieces.get("white").add(cp);
+            else clone.chessPieces.get("black").add(cp);
+        }
+
+        clone.logic=new GameLogic(clone);
+        clone.blocked = Move.cloneBlocked(blocked);
+        clone.blocking = Move.cloneBlocked(blocking);
+        clone.eatenThisTurn = eatenThisTurn;
+        clone.eatenPieces = PieceFactory.cloneSet(eatenPieces);
+        clone.superficial=true;
+        return clone;
+    }
+
+    public boolean isSuperficial() {
+        return superficial;
     }
 }

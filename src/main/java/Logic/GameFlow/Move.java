@@ -31,7 +31,7 @@ public record Move(Position start, Position destination, ChessPiece chessPiece, 
     public static List<Position> clonePositions(List<Position> origin){
         LinkedList<Position> result = new LinkedList<>();
         for(Position p:origin){
-            result.add(p.copy());
+            result.add(p);
         }
         return result;
     }

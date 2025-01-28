@@ -18,6 +18,7 @@ public class GameLogic {
     private Position promotionPos;
     private ChessPiece promotedPawn;
     private boolean promotion = false;
+    private boolean echec=false;
 
     public GameLogic(Board b){
         this.board= b;
@@ -51,6 +52,7 @@ public class GameLogic {
             Position oldPos = cp.getPosition();//position of piece before the move
             if (promotion) {
                 promotePawn(cp, dest);
+                cp.setPromoted(true);
                 board.getChessPieces().get((cp.getColor())).remove(cp);
             }else{
                 board.getArray().put(dest, cp);
@@ -80,16 +82,54 @@ public class GameLogic {
                 board.removeOnLeav(board.getEatenLast().getPosition());
             }
 
-            if (board.getMoveLog().getLast().eatenPiece() != null) {
-                board.getChessPieces().get((isWhiteTurn()) ? "black" : "white").remove(board.getMoveLog().getLast().eatenPiece());
+            if (board.getMoveLog().getLast().eatenPiece() != null) {/// comment this
+//                board.getChessPieces().get((isWhiteTurn()) ? "black" : "white").remove(board.getMoveLog().getLast().eatenPiece());
                 if (board.getMoveLog().getLast().eatenPiece().getName().equals("king")) {
                     board.setEndGame(true);
                 }
             }
+            if(board.isEatenThisTurn()) board.getEatenLast().setAlive(false);
             PossibleMoveChecker.checkPossibleMove(board,cp);
             board.changeTurn();
+            if(!board.isSuperficial()&& !board.isEndGame()){
+                if(!verifyCheck()){
+                    board.setEndGame(verifyDraw());
+                }
+            }
             return true;
         }return false;
+    }
+
+    private boolean verifyDraw() {
+        Board clone = board.cloneBrief();
+        List<ChessPiece> pieces =clone.getChessPieces().get(clone.isWhiteTurn()?"white":"black");
+        for (int i = 0; i < pieces.size(); i++) {
+            ChessPiece currentPiece = pieces.get(i);
+            List<Position> moves = Move.clonePositions(currentPiece.getPossibleMoves());
+            for (Position p : moves) {
+                if (clone.movePiece(currentPiece, p)) {
+                    if(!clone.isCheck()) return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    public boolean verifyCheck() {
+        echec=false;
+        Position kingP = new Position(-1,-1);
+        for(ChessPiece cp: board.getChessPieces().get(isWhiteTurn()?"white":"black"))
+            if(cp.getName().equals("king")) kingP=cp.getPosition();
+        if(kingP.col()==-1){
+            System.out.println("couldn't find the King");
+            return false;
+        }
+        for(ChessPiece cp: board.getChessPieces().get(isWhiteTurn()?"black":"white"))
+            if(cp.getPossibleMoves().contains(kingP)) {
+                echec=true;
+                return true;
+            }
+        return echec;
     }
 
     private void addMoveToLog(Board board, ChessPiece cp, Position pos, List<ChessPiece> toCheckBack){
@@ -102,12 +142,17 @@ public class GameLogic {
                 board.getMoveLog().add(new Move(cp.getPosition(), pos, cp, board.getArray().get(pos), false, toCheckBack, cp.hasMoved()));
         } else if (cp.getName().equals("king") && Math.abs(pos.col() - cp.getPosition().col()) > 1) {
             board.getMoveLog().add(new Move(cp.getPosition(), pos, cp, null, false, toCheckBack, cp.hasMoved()));
-            ChessPiece rook = board.getArray().get(pos.left());
+            ChessPiece rook = board.getArray().get(pos.left());//todo
             if (rook != null) {
-                movePiece(rook, pos.right());
+//                movePiece(rook, pos.right());
+                board.getArray().put(pos.left(),null);
+                rook.setPosition(pos.right());
+                board.getArray().put(rook.getPosition(),rook);
+                PossibleMoveChecker.checkPossibleMove(board,rook);
+                toCheckBack.add(rook);
             }
             cp.setEnPassant(true);
-            board.changeTurn();
+//            board.changeTurn();
         } else if (cp.getName().equals("pawn") && enPassant(cp, pos)) {
             board.getMoveLog().add(new Move(cp.getPosition(), pos, cp, board.getEatenLast(), false, toCheckBack, cp.hasMoved()));
             board.getArray().put(board.getEatenLast().getPosition(), null);
@@ -157,8 +202,7 @@ public class GameLogic {
     private boolean verify(ChessPiece cp, Position newPos){
         if(cp.getPossibleMoves().contains(newPos)) return true;
         PossibleMoveChecker.checkPossibleMove(board,cp);
-        if(cp.getPossibleMoves().contains(newPos)) return true;
-        return false;
+        return cp.getPossibleMoves().contains(newPos);
     }
 
     private boolean enPassant(ChessPiece cp, Position position){
@@ -185,14 +229,6 @@ public class GameLogic {
 
     public Position getPromotionPos() {
         return promotionPos;
-    }
-
-    public Player getPlayer1() {
-        return player1;
-    }
-
-    public Player getPlayer2() {
-        return player2;
     }
 
     public Board newGame(){

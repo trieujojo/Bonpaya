@@ -15,6 +15,8 @@ public class ChessPiece {
     private boolean hasMoved;
     private boolean enPassant;
     private String color;
+    private boolean alive;
+    private boolean promoted;
 
     public ChessPiece(String name, String color, int id) {
         this.name = name;
@@ -22,6 +24,8 @@ public class ChessPiece {
 //        blocked = new LinkedList<>();
         possibleMoves=new LinkedList<>();
         this.color=color;
+        alive=true;
+        promoted=false;
     }
 
     public ChessPiece(String name,String color, int id, Position position) {
@@ -31,6 +35,8 @@ public class ChessPiece {
 //        blocked = new LinkedList<>();
         possibleMoves=new LinkedList<>();
         this.color=color;
+        alive=true;
+        promoted =false;
     }
 
     public String getName() {
@@ -108,14 +114,36 @@ public class ChessPiece {
         return color.equals("white");
     }
 
+    public boolean isAlive() {
+        return alive;
+    }
+
+    public void setAlive(boolean alive) {
+        this.alive = alive;
+    }
+
+    public boolean isPromoted() {
+        return promoted;
+    }
+
+    public void setPromoted(boolean promoted) {
+        this.promoted = promoted;
+    }
+
+    public boolean isInGame(){
+        return (!promoted&&alive);
+    }
+
     public ChessPiece clone(){
         ChessPiece clone = new ChessPiece(name, color,id);
-        clone.setPosition(position.copy());
+        clone.setPosition(position);
         clone.setEnPassant(enPassant);
         clone.setMovePattern(movePattern);
         clone.setHasMoved(hasMoved);
         clone.color=color;
         clone.setPossibleMoves(List.copyOf(possibleMoves));
+        clone.alive=alive;
+        clone.promoted=promoted;
         return clone;
     }
 

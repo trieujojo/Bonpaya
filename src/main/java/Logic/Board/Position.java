@@ -36,9 +36,7 @@ public record Position(int row, int col) implements Comparable<Position> {
         if(row-1>=0&&col-1>=0) return new Position(row-1,col-1);
         return null;
     }
-    public Position copy(){
-        return new Position(row,col);
-    }
+
     public boolean equals(Object other){
         if(this == other) return true;
         if(other==null) return false;
